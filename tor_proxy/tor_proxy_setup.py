@@ -32,9 +32,9 @@ with open("docker-compose.yml", "w") as f:
         f.write("      - IP_CHANGE_SECONDS=60\n")
         f.write("    restart: always\n")
 
-# Generate proxy-list.txt.
+# Generate proxy_list.txt.
 #
-with open("proxy-list.txt", "w") as f:
+with open("proxy_list.txt", "w") as f:
     f.write(WARNING)
 
     for index, name in enumerate(NAMES):
