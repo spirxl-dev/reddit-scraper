@@ -1,25 +1,27 @@
 from scrapy import Spider, Request
-from reddit_spider.items import RedditPostItem
-from reddit_spider.spiders.start_urls import START_URLs
+from reddit_scraper.items import RedditPostItem
+from reddit_scraper.settings import START_URLS
 from scrapy_playwright.page import PageMethod
 import logging
 
 
-class RedditPostMetadata(Spider):
+class RedditSubredditMetaSpider(Spider):
     """
     A Scrapy spider that scrapes metadata from posts in multiple subreddits.
 
     This spider takes a list of subreddit URLs (START_URLS) and scrapes the following
-    metadata from each post:
+    metadata for each post in the subreddits:
         - title
         - author
         - comment count
         - permalink
         - created timestamp
         - start_url (the subreddit URL)
+
+    The gathered metadata can be used for further processing or detailed scraping.
     """
-    name = "reddit_post_metadata"
-    start_urls = START_URLs
+    name = "subreddit_post_meta"
+    start_urls = START_URLS
 
     def start_requests(self):
         """
