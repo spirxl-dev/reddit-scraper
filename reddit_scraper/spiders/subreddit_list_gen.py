@@ -15,7 +15,13 @@ class RedditSubredditListSpider(Spider):
     name = "subreddit_list_gen"
     start_urls = ["https://www.reddit.com/subreddits/"]
 
-    def __init__(self, max_pages=1, *args, **kwargs):
+    custom_settings = {
+        "ITEM_PIPELINES": {
+            "reddit_scraper.pipelines.SubredditListGenSpiderPipeline": 1,
+        }
+    }
+
+    def __init__(self, max_pages=3, *args, **kwargs):
         """
         Initializes the spider with a maximum number of pages to scrape.
         """

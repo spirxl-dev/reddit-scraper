@@ -3,6 +3,23 @@ import os
 from datetime import datetime
 from urllib.parse import urlparse
 
+class SubredditListGenSpiderPipeline:
+    def open_spider(self, spider):
+        self.subreddit_urls = []
+
+    def close_spider(self, spider):
+        with open("reddit_scraper/spiders/start_urls.py", "w") as f:
+            f.write("# Automatically generated list of subreddit start URLs\n")
+            f.write("START_URLS = [\n")
+            for url in self.subreddit_urls:
+                f.write(f"    '{url}',\n")
+            f.write("]\n")
+
+    def process_item(self, item, spider):
+        url = item.get("url")
+        if url:
+            self.subreddit_urls.append(url)
+        return item
 
 class SubredditPostMetaSpiderPipeline:
     def open_spider(self, spider):
