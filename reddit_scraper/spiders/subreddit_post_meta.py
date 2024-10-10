@@ -1,6 +1,6 @@
 from scrapy import Spider, Request
 from reddit_scraper.items import RedditPostItem
-from reddit_scraper.settings import START_URLS
+from reddit_scraper.spiders.start_urls import START_URLS
 from scrapy_playwright.page import PageMethod
 import logging
 
