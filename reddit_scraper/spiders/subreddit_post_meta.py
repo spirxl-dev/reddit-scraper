@@ -20,8 +20,15 @@ class RedditSubredditMetaSpider(Spider):
 
     The gathered metadata can be used for further processing or detailed scraping.
     """
+
     name = "subreddit_post_meta"
-    start_urls = START_URLS
+    start_urls: list = START_URLS
+
+    custom_settings = {
+        "ITEM_PIPELINES": {
+            "reddit_scraper.pipelines.SubredditPostMetaSpiderPipeline": 1,
+        }
+    }
 
     def start_requests(self):
         """
@@ -65,10 +72,10 @@ class RedditSubredditMetaSpider(Spider):
 
     def log_exit_ip_and_continue(self, response):
         """
-        Logs the exit IP, user-agent, and proxy (if used), and extracts the metadata 
+        Logs the exit IP, user-agent, and proxy (if used), and extracts the metadata
         of posts from the original subreddit response.
 
-        The metadata extracted includes title, author, comment count, permalink, 
+        The metadata extracted includes title, author, comment count, permalink,
         and created timestamp for each post.
         """
         actual_exit_ip = response.json().get("origin")

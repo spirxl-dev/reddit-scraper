@@ -1,10 +1,10 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import urlparse
 
 
-class RedditSpiderPipeline:
+class SubredditPostMetaSpiderPipeline:
     def open_spider(self, spider):
         self.output_dir = "json_files"
         os.makedirs(self.output_dir, exist_ok=True)
