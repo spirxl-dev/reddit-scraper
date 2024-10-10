@@ -1,6 +1,9 @@
 from scrapy import Spider
 
 
+from scrapy import Spider
+
+
 class SubredditListGenSpider(Spider):
     """
     A Scrapy spider that generates a list of subreddit URLs.
@@ -21,7 +24,7 @@ class SubredditListGenSpider(Spider):
         }
     }
 
-    def __init__(self, max_pages=3, *args, **kwargs):
+    def __init__(self, max_pages=90, *args, **kwargs):
         """
         Initializes the spider with a maximum number of pages to scrape.
         """
@@ -47,8 +50,7 @@ class SubredditListGenSpider(Spider):
                 "subscribers": subscribers.strip() if subscribers else None,
             }
 
-        # Pagination - Follow the 'more' link to scrape additional pages
-        next_page = response.css("a#sr-more-link::attr(href)").get()
+        next_page = response.css("span.next-button a::attr(href)").get()
         if next_page:
             yield response.follow(next_page, self.parse)
 
