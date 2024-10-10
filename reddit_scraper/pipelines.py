@@ -8,7 +8,7 @@ class SubredditListGenSpiderPipeline:
         self.subreddit_urls = []
 
     def close_spider(self, spider):
-        with open("reddit_scraper/spiders/start_urls.py", "w") as f:
+        with open("reddit_scraper/spiders/constants/start_urls.py", "w") as f:
             f.write("# Automatically generated list of subreddit start URLs. Run the subreddit_list_gen spider to get started.;\n")
             f.write("START_URLS = [\n")
             for url in self.subreddit_urls:

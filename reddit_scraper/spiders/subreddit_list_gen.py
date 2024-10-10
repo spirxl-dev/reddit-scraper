@@ -1,7 +1,7 @@
 from scrapy import Spider
 
 
-class RedditSubredditListSpider(Spider):
+class SubredditListGenSpider(Spider):
     """
     A Scrapy spider that generates a list of subreddit URLs.
 
@@ -25,7 +25,7 @@ class RedditSubredditListSpider(Spider):
         """
         Initializes the spider with a maximum number of pages to scrape.
         """
-        super(RedditSubredditListSpider, self).__init__(*args, **kwargs)
+        super(SubredditListGenSpider, self).__init__(*args, **kwargs)
         self.max_pages = int(max_pages)
         self.page_count = 0
 
