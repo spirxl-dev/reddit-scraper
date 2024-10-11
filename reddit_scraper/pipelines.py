@@ -3,13 +3,16 @@ import os
 from datetime import datetime
 from urllib.parse import urlparse
 
+
 class SubredditListGenSpiderPipeline:
     def open_spider(self, spider):
         self.subreddit_urls = []
 
     def close_spider(self, spider):
         with open("reddit_scraper/spiders/constants/start_urls.py", "w") as f:
-            f.write("# Automatically generated list of subreddit start URLs. Run the subreddit_list_gen spider to get started.;\n")
+            f.write(
+                "# Automatically generated list of subreddit start URLs. Run the subreddit_list_gen spider to get started.;\n"
+            )
             f.write("START_URLS = [\n")
             for url in self.subreddit_urls:
                 f.write(f"    '{url}',\n")
@@ -21,7 +24,26 @@ class SubredditListGenSpiderPipeline:
             self.subreddit_urls.append(url)
         return item
 
+
 class SubredditPostMetaSpiderPipeline:
+    def _format_timestamp(self, timestamp: str) -> str:
+        try:
+            parsed_time = datetime.fromisoformat(timestamp)
+            return parsed_time.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception as e:
+            return timestamp
+
+    def _convert_comments(self, comments: str) -> int:
+        try:
+            return int(comments)
+        except ValueError:
+            return 0
+
+    def _generate_filename(self, url: str) -> str:
+        parsed_url = urlparse(url)
+        filename = f"{parsed_url.netloc}{parsed_url.path}".replace("/", "_") + ".json"
+        return os.path.join(self.output_dir, filename)
+
     def open_spider(self, spider):
         self.output_dir = "json_files"
         os.makedirs(self.output_dir, exist_ok=True)
@@ -35,13 +57,18 @@ class SubredditPostMetaSpiderPipeline:
 
     def process_item(self, item, spider):
         if "created_timestamp" in item:
-            item["created_timestamp"] = self.format_timestamp(item["created_timestamp"])
+            item["created_timestamp"] = self._format_timestamp(
+                item["created_timestamp"]
+            )
 
         if "comments" in item:
-            item["comments"] = self.convert_comments(item["comments"])
+            item["comments"] = self._convert_comments(item["comments"])
+
+        if "permalink" in item:
+            item["permalink"] = f"https://www.reddit.com{item["permalink"]}"
 
         start_url = item.get("start_url")
-        filename = self.generate_filename(start_url)
+        filename = self._generate_filename(start_url)
 
         if filename not in self.files:
             self.files[filename] = open(filename, "w", encoding="utf-8")
@@ -51,21 +78,3 @@ class SubredditPostMetaSpiderPipeline:
         self.files[filename].write(",\n")
 
         return item
-
-    def format_timestamp(self, timestamp: str) -> str:
-        try:
-            parsed_time = datetime.fromisoformat(timestamp)
-            return parsed_time.strftime("%Y-%m-%d %H:%M:%S")
-        except Exception as e:
-            return timestamp
-
-    def convert_comments(self, comments: str) -> int:
-        try:
-            return int(comments)
-        except ValueError:
-            return 0
-
-    def generate_filename(self, url: str) -> str:
-        parsed_url = urlparse(url)
-        filename = f"{parsed_url.netloc}{parsed_url.path}".replace("/", "_") + ".json"
-        return os.path.join(self.output_dir, filename)
