@@ -1,4 +1,16 @@
-# Automatically generated list of subreddit start URLs. Run the subreddit_list_gen spider to get started.;
 START_URLS = [
-
+    "https://www.reddit.com/r/TalesFromTheFrontDesk/",
+    "https://www.reddit.com/r/ArtificialInteligence/",
+    "https://www.reddit.com/r/LoveIslandTV/",
+    "https://www.reddit.com/r/starcraft/",
+    "https://www.reddit.com/r/retrogaming/",
+    "https://www.reddit.com/r/OnePieceSpoilers/",
+    "https://www.reddit.com/r/PhD/",
+    "https://www.reddit.com/r/FoundryVTT/",
+    "https://www.reddit.com/r/DiscoElysium/",
+    "https://www.reddit.com/r/unitedairlines/",
+    "https://www.reddit.com/r/adhdwomen/",
+    "https://www.reddit.com/r/GodofWar/",
+    "https://www.reddit.com/r/Smite/",
+    "https://www.reddit.com/r/lies/",
 ]
