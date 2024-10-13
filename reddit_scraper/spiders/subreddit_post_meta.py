@@ -98,7 +98,7 @@ class SubredditPostMetaSpider(Spider):
             postItem = RedditPostItem()
             postItem["title"] = post.attrib.get("post-title")
             postItem["author"] = post.attrib.get("author")
-            postItem["comments"] = int(post.attrib.get("comment-count"))
+            postItem["comments"] = post.attrib.get("comment-count")
             postItem["permalink"] = post.attrib.get("permalink")
             postItem["created_timestamp"] = post.attrib.get("created-timestamp")
             postItem["start_url"] = start_url
