@@ -1,6 +1,3 @@
-import json
-import os
-from urllib.parse import urlparse, quote
 from scrapy import Spider, Request
 from scrapy_playwright.page import PageMethod
 import logging

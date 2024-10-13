@@ -16,8 +16,7 @@ class RedditPostItem(scrapy.Item):
     created_timestamp = scrapy.Field()
     start_url = scrapy.Field()
 
-    # Add the post_body field
     post_title = scrapy.Field()
     post_content = scrapy.Field()
-    post_body = scrapy.Field()  # New field for the post content
-    upvotes = scrapy.Field()  # If you also want to scrape upvotes
+    post_body = scrapy.Field()
+    upvotes = scrapy.Field()

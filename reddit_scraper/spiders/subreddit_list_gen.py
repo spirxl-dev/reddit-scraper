@@ -1,9 +1,5 @@
 from scrapy import Spider
 
-
-from scrapy import Spider
-
-
 class SubredditListGenSpider(Spider):
     """
     A Scrapy spider that generates a list of subreddit URLs.
