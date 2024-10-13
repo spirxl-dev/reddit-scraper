@@ -33,12 +33,6 @@ class SubredditPostMetaSpiderPipeline:
         except Exception as e:
             return timestamp
 
-    def _convert_comments(self, comments: str) -> int:
-        try:
-            return int(comments)
-        except ValueError:
-            return 0
-
     def _generate_filename(self, url: str) -> str:
         parsed_url = urlparse(url)
         filename = f"{parsed_url.netloc}{parsed_url.path}".replace("/", "_") + ".json"
@@ -60,9 +54,6 @@ class SubredditPostMetaSpiderPipeline:
             item["created_timestamp"] = self._format_timestamp(
                 item["created_timestamp"]
             )
-
-        if "comments" in item:
-            item["comments"] = self._convert_comments(item["comments"])
 
         if "permalink" in item:
             item["permalink"] = f"https://www.reddit.com{item["permalink"]}"
