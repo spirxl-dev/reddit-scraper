@@ -114,11 +114,21 @@ class PostFullContentSpiderPipeline:
         if "post_comment_count" in item:
             item["post_comment_count"] = _convert_to_int(item["post_comment_count"])
 
+        if "post_permalink" in item:
+            item["post_permalink"] = f"https://www.reddit.com{item['post_permalink']}"
+        
+        if "post_subreddit" in item:
+            item["post_subreddit"] = item["post_subreddit"].strip('r/')
+
         if "comments" in item:
             for comment in item["comments"]:
                 if "comment_upvotes" in comment:
                     comment["comment_upvotes"] = _convert_to_int(
                         comment["comment_upvotes"]
+                    )
+                if "comment_permalink" in comment:
+                    comment["comment_permalink"] = (
+                        f"https://www.reddit.com{comment['comment_permalink']}"
                     )
 
         start_url = item.get("start_url", item.get("post_permalink"))

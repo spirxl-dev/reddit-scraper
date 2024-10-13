@@ -69,7 +69,6 @@ class PostFullContentSpider(Spider):
             post_comment_count = post_data_element.xpath("./@comment-count").get()
             post_author = post_data_element.xpath("./@author").get()
             post_subreddit = post_data_element.xpath("./@subreddit-prefixed-name").get()
-            post_item_state = post_data_element.xpath("./@item-state").get()
 
             comment_tree = response.xpath("//shreddit-comment-tree")
             comments = []
@@ -103,7 +102,6 @@ class PostFullContentSpider(Spider):
                 "post_comment_count": post_comment_count,
                 "post_permalink": post_permalink,
                 "post_subreddit": post_subreddit,
-                "post_item_state": post_item_state,
                 "comments": comments,
             }
 
