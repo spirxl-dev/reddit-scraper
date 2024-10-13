@@ -4,6 +4,16 @@ import logging
 
 
 class PostFullContentSpider(Spider):
+    """
+    A Scrapy spider that scrapes the full content of an individual Reddit post.
+
+    This spider takes a permalink for an individual post on a subreddit and
+    scrapes detailed data such as the post's title, content, upvotes, author,
+    created timestamp, comment count, and subreddit. It also gathers the comments
+    associated with the post, including each comment's author, text, upvotes,
+    permalink, and ID.
+    """
+
     name = "post_full_content"
     start_urls = [
         "https://www.reddit.com/r/ArtificialInteligence/comments/1g0v2bt/id_like_to_clone_my_dads_voice_how_can_i_do_that/",
