@@ -14,6 +14,12 @@ class PostFullContentSpider(Spider):
         "https://www.reddit.com/r/ProgrammerHumor/comments/1g2nr38/linkedinisfunnyattimes/",
     ]
 
+    custom_settings = {
+        "ITEM_PIPELINES": {
+            "reddit_scraper.pipelines.PostFullContentSpiderPipeline": 1,
+        }
+    }
+
     def start_requests(self):
         for url in self.start_urls:
             yield Request(
@@ -100,19 +106,6 @@ class PostFullContentSpider(Spider):
                 "post_item_state": post_item_state,
                 "comments": comments,
             }
-
-            parsed_url = urlparse(response.url)
-            post_path = parsed_url.path.replace("/", "_")
-            safe_filename = quote(post_path, safe="")
-
-            output_dir = "output"
-            os.makedirs(output_dir, exist_ok=True)
-            file_path = os.path.join(output_dir, f"{safe_filename}.json")
-
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(post_data, f, ensure_ascii=False, indent=4)
-
-            logging.info(f"Post data saved to {file_path}")
 
             await response.meta["playwright_page"].close()
 
