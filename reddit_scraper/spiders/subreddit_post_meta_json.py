@@ -7,12 +7,12 @@ from datetime import datetime
 from urllib.parse import urljoin, urlparse
 
 
-class SubredditPostMetaJsonSpider(scrapy.Spider):
+class SubredditPostMetaSpider(scrapy.Spider):
     """
     A Scrapy spider that scrapes metadata from posts in multiple subreddits using Reddit's JSON endpoints.
 
     Example use from CLI: 
-        scrapy crawl subreddit_post_meta_json -a max_pages = 10
+        scrapy crawl subreddit_post_meta -a max_pages=10
 
     Features:
         - Scrapes up to `max_pages` (default: 1) pages of posts per subreddit.
@@ -21,7 +21,7 @@ class SubredditPostMetaJsonSpider(scrapy.Spider):
         - Logs and prints the number of posts scraped per subreddit.
     """
 
-    name = "subreddit_post_meta_json"
+    name = "subreddit_post_meta"
     start_urls = START_URLS
 
     custom_settings = {
@@ -38,7 +38,7 @@ class SubredditPostMetaJsonSpider(scrapy.Spider):
             max_pages (int): The maximum number of pages (batches of 100 posts) to scrape per subreddit.
                              Defaults to 1.
         """
-        super(SubredditPostMetaJsonSpider, self).__init__(*args, **kwargs)
+        super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
         try:
             self.max_pages = int(max_pages)
             if self.max_pages < 1:

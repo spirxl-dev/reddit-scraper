@@ -56,7 +56,7 @@ class SubredditPostMetaSpiderPipeline:
     """
 
     def open_spider(self, spider):
-        self.output_dir = "subreddit_post_meta_json_files"
+        self.output_dir = "subreddit_post_meta_files"
         os.makedirs(self.output_dir, exist_ok=True)
         self.files = {}
 
