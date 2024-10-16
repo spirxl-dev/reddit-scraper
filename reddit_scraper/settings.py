@@ -27,16 +27,8 @@ REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
-DOWNLOAD_HANDLERS = {
-    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
-    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
-}
-
-PLAYWRIGHT_BROWSER_TYPE = "chromium"
-PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": True}
-
 DOWNLOADER_MIDDLEWARES = {
-    "reddit_scraper.middlewares.StealthPlaywrightMiddleware": 100,
+    # "reddit_scraper.middlewares.StealthPlaywrightMiddleware": 100,
     "scrapy_user_agents.middlewares.RandomUserAgentMiddleware": 400,
     "rotating_proxies.middlewares.RotatingProxyMiddleware": 610,
     "rotating_proxies.middlewares.BanDetectionMiddleware": 620,
@@ -45,8 +37,14 @@ DOWNLOADER_MIDDLEWARES = {
 ROTATING_PROXY_LIST_PATH = "tor_proxy/proxy_list.txt"
 ROTATING_PROXY_PAGE_RETRY_TIMES = 5
 
-# Populate this with subreddit links to start scraping with subreddit_post_meta spider
-START_URLS = []
+
+# DOWNLOAD_HANDLERS = {
+#     "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+#     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+# }
+
+# PLAYWRIGHT_BROWSER_TYPE = "chromium"
+# PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": True}
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
