@@ -20,7 +20,7 @@ class SubredditListGenSpider(Spider):
         }
     }
 
-    def __init__(self, max_pages=90, *args, **kwargs):
+    def __init__(self, max_pages=3, *args, **kwargs):
         """
         Initializes the spider with a maximum number of pages to scrape.
         """
@@ -50,4 +50,4 @@ class SubredditListGenSpider(Spider):
         if next_page:
             yield response.follow(next_page, self.parse)
 
-#  Example Usage: scrapy crawl subreddit_list_gen -a max_pages=3
+#  Example Usage: scrapy crawl subreddit_list_gen -a max_pages=3, max pages scraped is currently around 90
