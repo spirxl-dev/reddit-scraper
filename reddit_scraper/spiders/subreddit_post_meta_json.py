@@ -27,12 +27,7 @@ class SubredditPostMetaJsonSpider(scrapy.Spider):
     custom_settings = {
         "ITEM_PIPELINES": {
             "reddit_scraper.pipelines.SubredditPostMetaSpiderPipeline": 1,
-        },
-        "DOWNLOAD_DELAY": 2, 
-        "AUTOTHROTTLE_ENABLED": True,
-        "AUTOTHROTTLE_START_DELAY": 2,
-        "AUTOTHROTTLE_MAX_DELAY": 60,
-        "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
+        }
     }
 
     def __init__(self, max_pages=1, *args, **kwargs):
