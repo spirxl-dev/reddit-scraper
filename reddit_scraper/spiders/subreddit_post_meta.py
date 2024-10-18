@@ -1,13 +1,12 @@
-import scrapy
+from scrapy import Spider, Request
 from reddit_scraper.items import RedditPostItem
 from reddit_scraper.spiders.constants.start_urls import START_URLS
 import logging
 import json
-from datetime import datetime
 from urllib.parse import urljoin, urlparse
 
 
-class SubredditPostMetaSpider(scrapy.Spider):
+class SubredditPostMetaSpider(Spider):
     """
     A Scrapy spider that scrapes metadata from posts in multiple subreddits using Reddit's JSON endpoints.
 
@@ -53,7 +52,7 @@ class SubredditPostMetaSpider(scrapy.Spider):
         """
         for url in self.start_urls:
             json_url = f"{url}.json?limit=100"
-            yield scrapy.Request(
+            yield Request(
                 url=json_url,
                 callback=self.parse,
                 meta={
@@ -80,7 +79,7 @@ class SubredditPostMetaSpider(scrapy.Spider):
         meta = response.meta.copy()
         meta["json_data"] = data
 
-        yield scrapy.Request(
+        yield Request(
             url="https://httpbin.org/ip",
             callback=self.log_exit_ip_and_continue,
             meta=meta,
@@ -157,7 +156,7 @@ class SubredditPostMetaSpider(scrapy.Spider):
         if after and current_page < max_pages:
             next_page = current_page + 1
             next_json_url = f"{start_url}.json?after={after}&limit=100"
-            yield scrapy.Request(
+            yield Request(
                 url=next_json_url,
                 callback=self.parse,
                 meta={

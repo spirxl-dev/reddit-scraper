@@ -1,6 +1,7 @@
-import scrapy
+from scrapy import Spider, Request
 
-class SubredditListGenSpider(scrapy.Spider):
+
+class SubredditListGenSpider(Spider):
     """
     A Scrapy spider that generates a list of subreddit URLs using Reddit's JSON API.
 
@@ -35,23 +36,24 @@ class SubredditListGenSpider(scrapy.Spider):
         self.page_count += 1
         data = response.json()
 
-        subreddits = data.get('data', {}).get('children', [])
+        subreddits = data.get("data", {}).get("children", [])
 
         for subreddit in subreddits:
-            subreddit_data = subreddit.get('data', {})
-            title = subreddit_data.get('display_name')
+            subreddit_data = subreddit.get("data", {})
+            title = subreddit_data.get("display_name")
             link = f"https://www.reddit.com{subreddit_data.get('url')}"
-            subscribers = subreddit_data.get('subscribers')
+            subscribers = subreddit_data.get("subscribers")
 
             yield {
                 "title": title.strip() if title else None,
                 "url": link,
-                "subscribers": subscribers
+                "subscribers": subscribers,
             }
 
-        after = data.get('data', {}).get('after')
+        after = data.get("data", {}).get("after")
         if after:
             next_page = f"https://www.reddit.com/subreddits.json?after={after}"
-            yield scrapy.Request(next_page, callback=self.parse)
+            yield Request(next_page, callback=self.parse)
 
-#  Example Usage: scrapy crawl subreddit_list_gen -a max_pages=3, max pages scraped is currently around 90
+
+#  Example Usage: scrapy crawl subreddit_list_gen -a max_pages=3
