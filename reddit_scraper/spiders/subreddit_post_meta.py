@@ -50,8 +50,7 @@ class SubredditPostMetaSpider(Spider):
             )
             self.max_posts = 1
 
-        # Specify the folder where you want to save the data
-        self.data_folder = "data"  # You can change 'data' to any folder name you prefer
+        self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
 
     def start_requests(self):

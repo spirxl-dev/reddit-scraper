@@ -23,8 +23,6 @@ def validate_json_files(folder_path):
                 print(f"{filename}: Error - {str(e)}")
                 invalid_files += 1
 
-    # Print a summary of the validation results
-    print(f"\nProcessed {total_files} JSON files.")
     print(f"Valid JSON files: {valid_files}")
     print(f"Invalid JSON files: {invalid_files}")
 
