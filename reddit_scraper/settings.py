@@ -9,7 +9,7 @@
 
 BOT_NAME = "reddit_scraper"
 
-LOG_LEVEL = "ERROR"
+LOG_LEVEL = "DEBUG"
 LOG_FORMAT = "%(levelname)s: %(message)s"
 
 SPIDER_MODULES = ["reddit_scraper.spiders"]
@@ -20,7 +20,7 @@ NEWSPIDER_MODULE = "reddit_scraper.spiders"
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 24
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
