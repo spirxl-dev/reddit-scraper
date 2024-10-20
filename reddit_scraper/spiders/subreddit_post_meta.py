@@ -52,6 +52,7 @@ class SubredditPostMetaSpider(Spider):
 
         self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
+        self.subreddit_has_items = {}
 
     def start_requests(self):
         """
@@ -96,7 +97,6 @@ class SubredditPostMetaSpider(Spider):
                     "https://www.reddit.com", post_data.get("permalink")
                 ),
                 "created_timestamp": post_data.get("created_utc"),
-                "start_url": start_url,
             }
             extracted_posts.append(item)
 
@@ -107,11 +107,24 @@ class SubredditPostMetaSpider(Spider):
         subreddit_name = self.get_subreddit_name(start_url)
         posts_filename = os.path.join(self.data_folder, f"{subreddit_name}_posts.json")
 
+        if subreddit_name not in self.subreddit_has_items:
+            self.subreddit_has_items[subreddit_name] = False
+            try:
+                with open(posts_filename, "w", encoding="utf-8") as posts_file:
+                    posts_file.write("[")
+                logging.info(f"Started new JSON array in {posts_filename}")
+            except IOError as e:
+                self.logger.error(f"Error opening {posts_filename} for writing: {e}")
+
         try:
             with open(posts_filename, "a", encoding="utf-8") as posts_file:
                 for post in extracted_posts:
-                    json.dump(post, posts_file)
-                    posts_file.write("\n")
+                    if not self.subreddit_has_items[subreddit_name]:
+                        json.dump(post, posts_file)
+                        self.subreddit_has_items[subreddit_name] = True
+                    else:
+                        posts_file.write(",\n")
+                        json.dump(post, posts_file)
             logging.info(f"Appended extracted post data to {posts_filename}")
         except IOError as e:
             self.logger.error(
@@ -135,6 +148,21 @@ class SubredditPostMetaSpider(Spider):
             logging.info(f"Reached max_posts={max_posts} for subreddit: {start_url}")
         else:
             logging.info(f"No more pages to scrape for subreddit: {start_url}")
+
+    def closed(self, reason):
+        """
+        Called when the spider is closed. Writes the closing ']' to each JSON file.
+        """
+        for subreddit_name in self.subreddit_has_items:
+            posts_filename = os.path.join(
+                self.data_folder, f"{subreddit_name}_posts.json"
+            )
+            try:
+                with open(posts_filename, "a", encoding="utf-8") as posts_file:
+                    posts_file.write("]")
+                logging.info(f"Closed JSON array in {posts_filename}")
+            except IOError as e:
+                self.logger.error(f"Error closing {posts_filename}: {e}")
 
     def get_subreddit_name(self, url):
         """
