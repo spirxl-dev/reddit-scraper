@@ -9,7 +9,7 @@
 
 BOT_NAME = "reddit_scraper"
 
-LOG_LEVEL = "ERROR"
+LOG_LEVEL = "DEBUG"
 LOG_FORMAT = "%(levelname)s: %(message)s"
 
 SPIDER_MODULES = ["reddit_scraper.spiders"]
