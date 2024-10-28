@@ -1,144 +1,92 @@
-# import json
-# import os
-# from datetime import datetime
-# from urllib.parse import urlparse
+import json
+import os
+import logging
+from urllib.parse import urlparse
 
 
-# def _convert_to_int(value):
-#     try:
-#         return int(value)
-#     except (ValueError, TypeError):
-#         return None
+class SubredditPostMetaPipeline:
+    """Custom pipeline for subreddit_post_meta pipeline."""
 
+    def open_spider(self, spider):
+        self.data_folder = spider.data_folder
+        self.files = {}
+        self.subreddit_has_items = {}
+        self.spider = spider
 
-# def _format_timestamp(timestamp: str) -> str:
-#     try:
-#         parsed_time = datetime.fromisoformat(timestamp)
-#         return parsed_time.strftime("%Y-%m-%d %H:%M:%S")
-#     except Exception:
-#         return timestamp
+    def close_spider(self, spider):
+        for subreddit, file in self.files.items():
+            file.write("]")
+            file.close()
+            logging.info(f"Closed JSON array in {file.name}")
 
+    def process_item(self, item, spider):
+        permalink = item.get("permalink")
+        subreddit = self.extract_subreddit_from_permalink(permalink)
+        if not subreddit:
+            spider.logger.error("Subreddit not found in item permalink")
+            return item
 
-# def _generate_filename(url: str, output_dir: str) -> str:
-#     parsed_url = urlparse(url)
-#     filename = f"{parsed_url.netloc}{parsed_url.path}".replace("/", "_") + ".json"
-#     return os.path.join(output_dir, filename)
+        posts_filename = os.path.join(self.data_folder, f"{subreddit}_posts.json")
 
+        if subreddit not in self.files:
+            try:
+                os.makedirs(self.data_folder, exist_ok=True)
+                file = open(posts_filename, "w", encoding="utf-8")
+                file.write("[")
+                self.files[subreddit] = file
+                self.subreddit_has_items[subreddit] = False
+                logging.info(f"Started new JSON array in {posts_filename}")
+            except IOError as e:
+                spider.logger.error(f"Error opening {posts_filename} for writing: {e}")
+                return item
 
-# class SubredditListGenSpiderPipeline:
-#     """
-#     Pipeline for subreddit_list_gen spider.
-#     """
+        file = self.files[subreddit]
 
-#     def open_spider(self, spider):
-#         self.subreddit_urls = []
+        try:
+            if self.subreddit_has_items[subreddit]:
+                file.write(",\n")
+            else:
+                self.subreddit_has_items[subreddit] = True
 
-#     def close_spider(self, spider):
-#         with open("reddit_scraper/spiders/constants/start_urls.py", "w") as f:
-#             f.write(
-#                 "# Automatically generated list of subreddit start URLs. Run the subreddit_list_gen spider to get started.\n"
-#             )
-#             f.write("START_URLS = [\n")
-#             for url in self.subreddit_urls:
-#                 f.write(f"    '{url}',\n")
-#             f.write("]\n")
+            item_dict = dict(item)
 
-#     def process_item(self, item, spider):
-#         url = item.get("url")
-#         if url:
-#             self.subreddit_urls.append(url)
-#         return item
+            def serialize(value):
+                try:
+                    json.dumps(value)
+                    return value
+                except TypeError:
+                    if isinstance(value, dict):
+                        return {k: serialize(v) for k, v in value.items()}
+                    elif isinstance(value, list):
+                        return [serialize(v) for v in value]
+                    else:
+                        return str(value)
 
+            for key, value in item_dict.items():
+                if isinstance(value, (dict, list)):
+                    item_dict[key] = serialize(value)
 
-# class SubredditPostMetaSpiderPipeline:
-#     """
-#     Pipeline for subreddit_post_meta spider.
-#     """
+            json.dump(item_dict, file)
+            logging.debug(f"Appended item to {posts_filename}")
+        except Exception as e:
+            spider.logger.error(f"Error writing item to {posts_filename}: {e}")
 
-#     def open_spider(self, spider):
-#         self.output_dir = "subreddit_post_meta_files"
-#         os.makedirs(self.output_dir, exist_ok=True)
-#         self.files = {}
+        return item
 
-#     def close_spider(self, spider):
-#         for file in self.files.values():
-#             file.seek(file.tell() - 2, os.SEEK_SET)
-#             file.write("\n]")
-#             file.close()
+    def extract_subreddit_from_permalink(self, permalink):
+        """
+        Extracts the subreddit name from the given permalink URL.
 
-#     def process_item(self, item, spider):
+        Args:
+            permalink (str): The permalink URL of the Reddit post.
 
-#         if "created_timestamp" in item:
-#             item["created_timestamp"] = _format_timestamp(item["created_timestamp"])
-
-#         if "comments" in item:
-#             item["comments"] = _convert_to_int(item["comments"])
-
-#         if "permalink" in item:
-#             item["permalink"] = f"https://www.reddit.com{item['permalink']}"
-
-#         start_url = item.get("start_url")
-#         filename = _generate_filename(start_url, self.output_dir)
-
-#         if filename not in self.files:
-#             self.files[filename] = open(filename, "w", encoding="utf-8")
-#             self.files[filename].write("[\n")
-
-#         json.dump(dict(item), self.files[filename], ensure_ascii=False, indent=4)
-#         self.files[filename].write(",\n")
-
-#         return item
-
-
-# class PostFullContentSpiderPipeline:
-#     """
-#     Pipeline for post_full_content spider.
-#     """
-
-#     def open_spider(self, spider):
-#         self.output_dir = "post_full_content_json_files"
-#         os.makedirs(self.output_dir, exist_ok=True)
-#         self.files = {}
-
-#     def close_spider(self, spider):
-#         for file in self.files.values():
-#             file.seek(file.tell() - 2, os.SEEK_SET)
-#             file.write("\n]")
-#             file.close()
-
-#     def process_item(self, item, spider):
-
-#         if "post_upvotes" in item:
-#             item["post_upvotes"] = _convert_to_int(item["post_upvotes"])
-
-#         if "post_comment_count" in item:
-#             item["post_comment_count"] = _convert_to_int(item["post_comment_count"])
-
-#         if "post_permalink" in item:
-#             item["post_permalink"] = f"https://www.reddit.com{item['post_permalink']}"
-        
-#         if "post_subreddit" in item:
-#             item["post_subreddit"] = item["post_subreddit"].strip('r/')
-
-#         if "comments" in item:
-#             for comment in item["comments"]:
-#                 if "comment_upvotes" in comment:
-#                     comment["comment_upvotes"] = _convert_to_int(
-#                         comment["comment_upvotes"]
-#                     )
-#                 if "comment_permalink" in comment:
-#                     comment["comment_permalink"] = (
-#                         f"https://www.reddit.com{comment['comment_permalink']}"
-#                     )
-
-#         start_url = item.get("start_url", item.get("post_permalink"))
-#         filename = _generate_filename(start_url, self.output_dir)
-
-#         if filename not in self.files:
-#             self.files[filename] = open(filename, "w", encoding="utf-8")
-#             self.files[filename].write("[\n")
-
-#         json.dump(dict(item), self.files[filename], ensure_ascii=False, indent=4)
-#         self.files[filename].write(",\n")
-
-#         return item
+        Returns:
+            str: The subreddit name or None if it cannot be extracted.
+        """
+        if not permalink:
+            return None
+        parsed_url = urlparse(permalink)
+        path_parts = parsed_url.path.strip("/").split("/")
+        if len(path_parts) >= 3 and path_parts[0].lower() == "r":
+            return path_parts[1]
+        return None

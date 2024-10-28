@@ -1,11 +1,12 @@
-from scrapy import Spider, Request
+# reddit_scraper/spiders/subreddit_post_meta_spider.py
 
-# from reddit_scraper.items import RedditPostItem  # Assuming you still have this defined
+from scrapy import Spider, Request
+from reddit_scraper.items import RedditPostItem
 from reddit_scraper.spiders.constants.start_urls import START_URLS
 import logging
 import json
 import os
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 
 class SubredditPostMetaSpider(Spider):
@@ -13,10 +14,10 @@ class SubredditPostMetaSpider(Spider):
     A Scrapy spider that scrapes metadata from posts in multiple subreddits using Reddit's JSON endpoints.
 
     Example use from CLI:
-        scrapy crawl subreddit_post_meta -a max_posts=10
+        scrapy crawl subreddit_post_meta -a max_pages=10
 
     Features:
-        - Scrapes up to `max_posts` (default: 1) pages of posts per subreddit.
+        - Scrapes up to `max_pages` (default: 1) pages of posts per subreddit.
         - Saves extracted post data to JSON files in a specified folder.
         - Logs the exit IP address, user-agent, and proxy information.
         - Logs and prints the number of posts scraped per subreddit.
@@ -25,34 +26,33 @@ class SubredditPostMetaSpider(Spider):
     name = "subreddit_post_meta"
     start_urls = START_URLS
 
-    # custom_settings = {
-    #     "ITEM_PIPELINES": {
-    #         "reddit_scraper.pipelines.SubredditPostMetaSpiderPipeline": 1,
-    #     }
-    # }
+    custom_settings = {
+        "ITEM_PIPELINES": {
+            "reddit_scraper.pipelines.SubredditPostMetaPipeline": 300,
+        }
+    }
 
-    def __init__(self, max_posts=1, *args, **kwargs):
+    def __init__(self, max_pages=1, *args, **kwargs):
         """
         Initializes the spider with a maximum number of pages to scrape per subreddit.
 
         Args:
-            max_posts (int): The maximum number of pages (batches of 100 posts) to scrape per subreddit.
+            max_pages (int): The maximum number of pages (batches of  approx 100 posts) to scrape per subreddit.
                              Defaults to 1.
         """
         super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
         try:
-            self.max_posts = int(max_posts)
-            if self.max_posts < 1:
+            self.max_pages = int(max_pages)
+            if self.max_pages < 1:
                 raise ValueError
         except ValueError:
             self.logger.error(
-                "Invalid `max_posts` value provided. It should be a positive integer."
+                "Invalid `max_pages` value provided. It should be a positive integer."
             )
-            self.max_posts = 1
+            self.max_pages = 1
 
         self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
-        self.subreddit_has_items = {}
 
     def start_requests(self):
         """
@@ -63,7 +63,7 @@ class SubredditPostMetaSpider(Spider):
             yield Request(
                 url=json_url,
                 callback=self.parse,
-                meta={"start_url": url, "page": 1, "max_posts": self.max_posts},
+                meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
             )
 
     def parse(self, response):
@@ -81,58 +81,63 @@ class SubredditPostMetaSpider(Spider):
 
         start_url = response.meta.get("start_url")
         current_page = response.meta.get("page", 1)
-        max_posts = response.meta.get("max_posts", 1)
+        max_pages = response.meta.get("max_pages", 1)
 
         posts = data.get("data", {}).get("children", [])
         num_posts = len(posts)
 
-        extracted_posts = []
         for post in posts:
             post_data = post["data"]
-            item = {
-                "title": post_data.get("title"),
-                "author": post_data.get("author"),
-                "comments": post_data.get("num_comments"),
-                "permalink": urljoin(
-                    "https://www.reddit.com", post_data.get("permalink")
-                ),
-                "created_timestamp": post_data.get("created_utc"),
-            }
-            extracted_posts.append(item)
-
+            item = RedditPostItem(
+                author=post_data.get("author"),
+                comments=post_data.get("num_comments"),
+                permalink=urljoin("https://www.reddit.com", post_data.get("permalink")),
+                created_timestamp=post_data.get("created_utc"),
+                upvotes=post_data.get("ups"),
+                post_body=post_data.get("selftext"),
+                post_content=post_data.get("selftext_html"),
+                post_title=post_data.get("title"),
+                id=post_data.get("id"),
+                name=post_data.get("name"),
+                url=post_data.get("url"),
+                score=post_data.get("score"),
+                num_crossposts=post_data.get("num_crossposts"),
+                over_18=post_data.get("over_18"),
+                spoiler=post_data.get("spoiler"),
+                locked=post_data.get("locked"),
+                stickied=post_data.get("stickied"),
+                distinguished=post_data.get("distinguished"),
+                is_original_content=post_data.get("is_original_content"),
+                is_self=post_data.get("is_self"),
+                author_fullname=post_data.get("author_fullname"),
+                author_premium=post_data.get("author_premium"),
+                media=post_data.get("media"),
+                media_metadata=post_data.get("media_metadata"),
+                preview=post_data.get("preview"),
+                thumbnail=post_data.get("thumbnail"),
+                thumbnail_width=post_data.get("thumbnail_width"),
+                thumbnail_height=post_data.get("thumbnail_height"),
+                gallery_data=post_data.get("gallery_data"),
+                created=post_data.get("created"),
+                edited=post_data.get("edited"),
+                ups=post_data.get("ups"),
+                downs=post_data.get("downs"),
+                upvote_ratio=post_data.get("upvote_ratio"),
+                num_reports=post_data.get("num_reports"),
+                link_flair_text=post_data.get("link_flair_text"),
+                link_flair_css_class=post_data.get("link_flair_css_class"),
+                post_hint=post_data.get("post_hint"),
+                subreddit_subscribers=post_data.get("subreddit_subscribers"),
+                selftext=post_data.get("selftext"),
+                selftext_html=post_data.get("selftext_html"),
+            )
+            yield item
         logging.info(
             f"Scraped {num_posts} posts from subreddit: {start_url} (Page {current_page})"
         )
 
-        subreddit_name = self.get_subreddit_name(start_url)
-        posts_filename = os.path.join(self.data_folder, f"{subreddit_name}_posts.json")
-
-        if subreddit_name not in self.subreddit_has_items:
-            self.subreddit_has_items[subreddit_name] = False
-            try:
-                with open(posts_filename, "w", encoding="utf-8") as posts_file:
-                    posts_file.write("[")
-                logging.info(f"Started new JSON array in {posts_filename}")
-            except IOError as e:
-                self.logger.error(f"Error opening {posts_filename} for writing: {e}")
-
-        try:
-            with open(posts_filename, "a", encoding="utf-8") as posts_file:
-                for post in extracted_posts:
-                    if not self.subreddit_has_items[subreddit_name]:
-                        json.dump(post, posts_file)
-                        self.subreddit_has_items[subreddit_name] = True
-                    else:
-                        posts_file.write(",\n")
-                        json.dump(post, posts_file)
-            logging.info(f"Appended extracted post data to {posts_filename}")
-        except IOError as e:
-            self.logger.error(
-                f"Error saving extracted post data to {posts_filename}: {e}"
-            )
-
         after = data.get("data", {}).get("after")
-        if after and current_page < max_posts:
+        if after and current_page < max_pages:
             next_page = current_page + 1
             next_json_url = f"{start_url}.json?after={after}&limit=100"
             yield Request(
@@ -141,41 +146,10 @@ class SubredditPostMetaSpider(Spider):
                 meta={
                     "start_url": start_url,
                     "page": next_page,
-                    "max_posts": max_posts,
+                    "max_pages": max_pages,
                 },
             )
-        elif after and current_page >= max_posts:
-            logging.info(f"Reached max_posts={max_posts} for subreddit: {start_url}")
+        elif after and current_page >= max_pages:
+            logging.info(f"Reached max_pages={max_pages} for subreddit: {start_url}")
         else:
             logging.info(f"No more pages to scrape for subreddit: {start_url}")
-
-    def closed(self, reason):
-        """
-        Called when the spider is closed. Writes the closing ']' to each JSON file.
-        """
-        for subreddit_name in self.subreddit_has_items:
-            posts_filename = os.path.join(
-                self.data_folder, f"{subreddit_name}_posts.json"
-            )
-            try:
-                with open(posts_filename, "a", encoding="utf-8") as posts_file:
-                    posts_file.write("]")
-                logging.info(f"Closed JSON array in {posts_filename}")
-            except IOError as e:
-                self.logger.error(f"Error closing {posts_filename}: {e}")
-
-    def get_subreddit_name(self, url):
-        """
-        Extracts the subreddit name from the given URL.
-
-        Args:
-            url (str): The subreddit URL.
-
-        Returns:
-            str: The subreddit name.
-        """
-        parsed_url = urlparse(url)
-        path_parts = parsed_url.path.strip("/").split("/")
-        if len(path_parts) >= 2 and path_parts[0].lower() == "r":
-            return path_parts[1]
-        return "unknown_subreddit"
