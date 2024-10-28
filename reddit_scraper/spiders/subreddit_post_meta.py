@@ -14,10 +14,10 @@ class SubredditPostMetaSpider(Spider):
     A Scrapy spider that scrapes metadata from posts in multiple subreddits using Reddit's JSON endpoints.
 
     Example use from CLI:
-        scrapy crawl subreddit_post_meta -a max_posts=10
+        scrapy crawl subreddit_post_meta -a max_pages=10
 
     Features:
-        - Scrapes up to `max_posts` (default: 1) pages of posts per subreddit.
+        - Scrapes up to `max_pages` (default: 1) pages of posts per subreddit.
         - Saves extracted post data to JSON files in a specified folder.
         - Logs the exit IP address, user-agent, and proxy information.
         - Logs and prints the number of posts scraped per subreddit.
@@ -32,24 +32,24 @@ class SubredditPostMetaSpider(Spider):
         }
     }
 
-    def __init__(self, max_posts=1, *args, **kwargs):
+    def __init__(self, max_pages=1, *args, **kwargs):
         """
         Initializes the spider with a maximum number of pages to scrape per subreddit.
 
         Args:
-            max_posts (int): The maximum number of pages (batches of 100 posts) to scrape per subreddit.
+            max_pages (int): The maximum number of pages (batches of  approx 100 posts) to scrape per subreddit.
                              Defaults to 1.
         """
         super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
         try:
-            self.max_posts = int(max_posts)
-            if self.max_posts < 1:
+            self.max_pages = int(max_pages)
+            if self.max_pages < 1:
                 raise ValueError
         except ValueError:
             self.logger.error(
-                "Invalid `max_posts` value provided. It should be a positive integer."
+                "Invalid `max_pages` value provided. It should be a positive integer."
             )
-            self.max_posts = 1
+            self.max_pages = 1
 
         self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
@@ -63,7 +63,7 @@ class SubredditPostMetaSpider(Spider):
             yield Request(
                 url=json_url,
                 callback=self.parse,
-                meta={"start_url": url, "page": 1, "max_posts": self.max_posts},
+                meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
             )
 
     def parse(self, response):
@@ -81,7 +81,7 @@ class SubredditPostMetaSpider(Spider):
 
         start_url = response.meta.get("start_url")
         current_page = response.meta.get("page", 1)
-        max_posts = response.meta.get("max_posts", 1)
+        max_pages = response.meta.get("max_pages", 1)
 
 
         posts = data.get("data", {}).get("children", [])
@@ -138,7 +138,7 @@ class SubredditPostMetaSpider(Spider):
         )
 
         after = data.get("data", {}).get("after")
-        if after and current_page < max_posts:
+        if after and current_page < max_pages:
             next_page = current_page + 1
             next_json_url = f"{start_url}.json?after={after}&limit=100"
             yield Request(
@@ -147,10 +147,10 @@ class SubredditPostMetaSpider(Spider):
                 meta={
                     "start_url": start_url,
                     "page": next_page,
-                    "max_posts": max_posts,
+                    "max_pages": max_pages,
                 },
             )
-        elif after and current_page >= max_posts:
-            logging.info(f"Reached max_posts={max_posts} for subreddit: {start_url}")
+        elif after and current_page >= max_pages:
+            logging.info(f"Reached max_pages={max_pages} for subreddit: {start_url}")
         else:
             logging.info(f"No more pages to scrape for subreddit: {start_url}")
