@@ -1,9 +1,11 @@
+import logging
+from json import JSONDecodeError
+from urllib.parse import urljoin
+
 from scrapy import Spider, Request
+
 from reddit_scraper.items import RedditPostItem
 from reddit_scraper.spiders.constants.start_urls import START_URLS
-import logging
-import json
-from urllib.parse import urljoin
 
 
 class SubredditPostMetaSpider(Spider):
@@ -38,9 +40,7 @@ class SubredditPostMetaSpider(Spider):
             if self.max_pages < 1:
                 raise ValueError
         except ValueError:
-            self.logger.error(
-                "Invalid `max_pages` value provided. It should be a positive integer."
-            )
+            logging.error("Invalid `max_pages` value. Should be a positive integer.")
             self.max_pages = 1
 
     def start_requests(self):
@@ -64,8 +64,8 @@ class SubredditPostMetaSpider(Spider):
         """
         try:
             data = response.json()
-        except json.JSONDecodeError:
-            self.logger.error(f"Failed to decode JSON from {response.url}")
+        except JSONDecodeError:
+            logging.error(f"Failed to decode JSON from {response.url}")
             return
 
         start_url = response.meta.get("start_url")
