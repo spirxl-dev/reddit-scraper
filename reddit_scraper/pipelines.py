@@ -1,7 +1,9 @@
+import os
 import sqlite3
 import logging
 import json
 from urllib.parse import urlparse
+from scrapy.utils.project import get_project_settings
 
 
 class SubredditPostMetaPipeline:
@@ -13,8 +15,13 @@ class SubredditPostMetaPipeline:
     """
 
     def open_spider(self, spider):
-        self.database_path = "subreddit_post_meta.db"
-        self.conn = sqlite3.connect(self.database_path)
+        settings = get_project_settings()
+        databases_dir = settings.get("DB_DIR")
+        database_path = settings.get("SUBREDDIT_POST_META_DB_PATH")
+
+        os.makedirs(databases_dir, exist_ok=True)
+
+        self.conn = sqlite3.connect(database_path)
         self.cursor = self.conn.cursor()
         self.create_posts_table()
 
@@ -92,7 +99,7 @@ class SubredditPostMetaPipeline:
         logging.info("Created posts table in SQLite database")
 
     def insert_item(self, item_dict):
-        """Inserts an item into the posts table."""
+        """Inserts an item into the posts table"""
         columns = ", ".join(item_dict.keys())
         placeholders = ", ".join(["?"] * len(item_dict))
         insert_sql = f"INSERT OR REPLACE INTO posts ({columns}) VALUES ({placeholders})"
