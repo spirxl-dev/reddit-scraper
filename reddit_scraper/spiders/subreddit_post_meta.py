@@ -6,7 +6,7 @@ from reddit_scraper.spiders.constants.start_urls import START_URLS
 import logging
 import json
 import os
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 
 class SubredditPostMetaSpider(Spider):
@@ -51,9 +51,6 @@ class SubredditPostMetaSpider(Spider):
             )
             self.max_pages = 1
 
-        self.data_folder = "data"
-        os.makedirs(self.data_folder, exist_ok=True)
-
     def start_requests(self):
         """
         Generates the initial requests for each subreddit with the specified limit and initial page.
@@ -82,7 +79,6 @@ class SubredditPostMetaSpider(Spider):
         start_url = response.meta.get("start_url")
         current_page = response.meta.get("page", 1)
         max_pages = response.meta.get("max_pages", 1)
-
 
         posts = data.get("data", {}).get("children", [])
         num_posts = len(posts)

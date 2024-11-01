@@ -6,6 +6,7 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
 
 BOT_NAME = "reddit_scraper"
 
@@ -14,6 +15,10 @@ LOG_FORMAT = "%(levelname)s: %(message)s"
 
 SPIDER_MODULES = ["reddit_scraper.spiders"]
 NEWSPIDER_MODULE = "reddit_scraper.spiders"
+
+# Database settings
+DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'databases')
+SUBREDDIT_POST_META_DB_PATH = os.path.join(DB_DIR, 'subreddit_post_meta.db')
 
 
 # Obey robots.txt rules
