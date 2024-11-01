@@ -23,7 +23,7 @@ class SubredditPostMetaPipeline:
 
         self.conn = sqlite3.connect(database_path)
         self.cursor = self.conn.cursor()
-        self.create_posts_table()
+        self._create_posts_table()
 
     def close_spider(self, spider):
         self.conn.commit()
@@ -43,12 +43,12 @@ class SubredditPostMetaPipeline:
             else:
                 item_dict[key] = value
 
-        self.insert_item(item_dict)
+        self._insert_item(item_dict)
         logging.debug(f"Inserted item into posts table in SQLite database")
 
         return item
 
-    def create_posts_table(self):
+    def _create_posts_table(self):
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS posts (
             id TEXT PRIMARY KEY,
@@ -98,7 +98,7 @@ class SubredditPostMetaPipeline:
         self.cursor.execute(create_table_sql)
         logging.info("Created posts table in SQLite database")
 
-    def insert_item(self, item_dict):
+    def _insert_item(self, item_dict):
         """Inserts an item into the posts table"""
         columns = ", ".join(item_dict.keys())
         placeholders = ", ".join(["?"] * len(item_dict))
