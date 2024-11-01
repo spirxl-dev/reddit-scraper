@@ -51,9 +51,6 @@ class SubredditPostMetaSpider(Spider):
             )
             self.max_pages = 1
 
-        self.data_folder = "data"
-        os.makedirs(self.data_folder, exist_ok=True)
-
     def start_requests(self):
         """
         Generates the initial requests for each subreddit with the specified limit and initial page.
