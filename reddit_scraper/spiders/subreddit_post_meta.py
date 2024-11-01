@@ -1,12 +1,11 @@
-# reddit_scraper/spiders/subreddit_post_meta_spider.py
+import logging
+from json import JSONDecodeError
+from urllib.parse import urljoin
 
 from scrapy import Spider, Request
+
 from reddit_scraper.items import RedditPostItem
 from reddit_scraper.spiders.constants.start_urls import START_URLS
-import logging
-import json
-import os
-from urllib.parse import urljoin
 
 
 class SubredditPostMetaSpider(Spider):
@@ -16,11 +15,6 @@ class SubredditPostMetaSpider(Spider):
     Example use from CLI:
         scrapy crawl subreddit_post_meta -a max_pages=10
 
-    Features:
-        - Scrapes up to `max_pages` (default: 1) pages of posts per subreddit.
-        - Saves extracted post data to JSON files in a specified folder.
-        - Logs the exit IP address, user-agent, and proxy information.
-        - Logs and prints the number of posts scraped per subreddit.
     """
 
     name = "subreddit_post_meta"
@@ -34,10 +28,10 @@ class SubredditPostMetaSpider(Spider):
 
     def __init__(self, max_pages=1, *args, **kwargs):
         """
-        Initializes the spider with a maximum number of pages to scrape per subreddit.
+        Initialises the spider with a maximum number of pages to scrape per subreddit.
 
         Args:
-            max_pages (int): The maximum number of pages (batches of  approx 100 posts) to scrape per subreddit.
+            max_pages (int): The maximum number of pages (each page is a batch of approx 100 posts) to scrape per subreddit.
                              Defaults to 1.
         """
         super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
@@ -46,9 +40,7 @@ class SubredditPostMetaSpider(Spider):
             if self.max_pages < 1:
                 raise ValueError
         except ValueError:
-            self.logger.error(
-                "Invalid `max_pages` value provided. It should be a positive integer."
-            )
+            logging.error("Invalid `max_pages` value. Should be a positive integer.")
             self.max_pages = 1
 
     def start_requests(self):
@@ -65,15 +57,15 @@ class SubredditPostMetaSpider(Spider):
 
     def parse(self, response):
         """
-        Parses the JSON response, logs exit IP, and handles pagination.
+        Parses the JSON response and handles pagination.
 
         Args:
             response (scrapy.http.Response): The HTTP response object.
         """
         try:
             data = response.json()
-        except json.JSONDecodeError:
-            self.logger.error(f"Failed to decode JSON from {response.url}")
+        except JSONDecodeError:
+            logging.error(f"Failed to decode JSON from {response.url}")
             return
 
         start_url = response.meta.get("start_url")
