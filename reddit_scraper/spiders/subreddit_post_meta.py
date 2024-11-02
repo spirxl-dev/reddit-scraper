@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from urllib.parse import urljoin
 
 from scrapy import Spider, Request
+from scrapy.utils.project import get_project_settings
 from reddit_scraper.items import RedditPostItem
 
 
@@ -44,7 +45,8 @@ class SubredditPostMetaSpider(Spider):
         """
         Generates the initial requests for each subreddit URL retrieved from the 'subreddit_list_gen.db' database.
         """
-        database_path = "databases/subreddit_list_gen.db"
+        settings = get_project_settings()
+        database_path = settings.get("SUBREDDIT_LIST_GEN_DB_PATH")
         connection = sqlite3.connect(database_path)
         cursor = connection.cursor()
 
