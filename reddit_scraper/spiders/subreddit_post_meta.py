@@ -22,7 +22,7 @@ class SubredditPostMetaSpider(Spider):
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.SubredditPostMetaPipeline": 300,
+            "reddit_scraper.pipelines.SubredditPostMetaPipeline": 1,
         }
     }
 

@@ -4,14 +4,13 @@ import logging
 import json
 from urllib.parse import urlparse
 from scrapy.utils.project import get_project_settings
+from scrapy.exceptions import DropItem
 
 
 class SubredditPostMetaPipeline:
     """
-    Pipeline for storing subreddit_post_meta spider data in an SQLite database.
+    Pipeline for storing `subreddit_post_meta` spider data in an SQLite database.
 
-    Inserts each item into a 'posts' table with a 'subreddit' column to distinguish
-    posts from different subreddits.
     """
 
     def open_spider(self, spider):
@@ -119,3 +118,49 @@ class SubredditPostMetaPipeline:
         if len(path_parts) >= 3 and path_parts[0].lower() == "r":
             return path_parts[1]
         return None
+
+class SubredditListGenPipeline:
+    """
+    Pipeline for storing scraped subreddit URLs from `subreddit_list_gen` spider into an SQLite database.
+    
+    """
+
+    def open_spider(self, spider):
+        settings = get_project_settings()
+        databases_dir = settings.get("DB_DIR")
+        database_path = settings.get("SUBREDDIT_LIST_GEN_DB_PATH")
+
+        os.makedirs(databases_dir, exist_ok=True)
+
+        self.conn = sqlite3.connect(database_path)
+        self.cursor = self.conn.cursor()
+        self.create_table()
+
+    def close_spider(self, spider):
+        self.conn.commit()
+        self.conn.close()
+        logging.info(f"Closed SQLite database")
+
+    def create_table(self):
+        """Creates the subreddits table if it doesn't already exist."""
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS subreddits (
+            url TEXT PRIMARY KEY
+        );
+        """
+        self.cursor.execute(create_table_sql)
+        logging.info("Created table 'subreddits' in subreddit_list_gen.db")
+
+    def process_item(self, item, spider):
+        try:
+            self.cursor.execute("""
+                INSERT OR REPLACE INTO subreddits (url)
+                VALUES (?)
+            """, (item.get("url"),))
+            self.conn.commit()
+            logging.debug(f"Inserted item into subreddits table: {item}")
+        except sqlite3.Error as e:
+            logging.error(f"Error inserting item into subreddits table: {e}")
+            raise DropItem(f"Failed to insert item: {item}")
+
+        return item
