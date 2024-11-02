@@ -19,6 +19,7 @@ NEWSPIDER_MODULE = "reddit_scraper.spiders"
 # Database settings
 DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'databases')
 SUBREDDIT_POST_META_DB_PATH = os.path.join(DB_DIR, 'subreddit_post_meta.db')
+SUBREDDIT_LIST_GEN_DB_PATH = os.path.join(DB_DIR, 'subreddit_list_gen.db')
 
 
 # Obey robots.txt rules
