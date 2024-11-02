@@ -116,4 +116,4 @@ class PostFullContentSpider(Spider):
 
             yield post_data
         else:
-            self.logger.error("playwright_page not found in response meta.")
+            logging.error("playwright_page not found in response meta.")
