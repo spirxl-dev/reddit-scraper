@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from urllib.parse import urljoin
 
 from scrapy import Spider, Request
+from scrapy.exceptions import CloseSpider
 from scrapy.utils.project import get_project_settings
 from reddit_scraper.items import RedditPostItem
 
@@ -46,11 +47,21 @@ class SubredditPostMetaSpider(Spider):
         Generates the initial requests for each subreddit URL retrieved from the 'subreddit_list_gen.db' database.
         """
         settings = get_project_settings()
-        database_path = settings.get("SUBREDDIT_LIST_GEN_DB_PATH")
+        database_path = settings.get("DB_PATH")
         connection = sqlite3.connect(database_path)
         cursor = connection.cursor()
 
         try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'")
+            table_exists = cursor.fetchone()
+            if not table_exists:
+                raise CloseSpider("Subreddits table is missing in the database.")
+
+            cursor.execute("SELECT url FROM subreddits LIMIT 1")
+            row = cursor.fetchone()
+            if not row:
+                raise CloseSpider("Subreddits table is empty, please populate it with URLs.")
+
             cursor.execute("SELECT url FROM subreddits")
             rows = cursor.fetchall()
 
@@ -62,8 +73,8 @@ class SubredditPostMetaSpider(Spider):
                     callback=self.parse,
                     meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
                 )
-        except sqlite3.Error as e:
-            logging.error(f"Error accessing database {database_path}: {e}")
+        except sqlite3.Error:
+            raise CloseSpider("Database error encountered.")
         finally:
             connection.close()
 

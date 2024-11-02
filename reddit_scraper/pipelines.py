@@ -9,25 +9,25 @@ from scrapy.exceptions import DropItem
 
 class SubredditPostMetaPipeline:
     """
-    Pipeline for storing `subreddit_post_meta` spider data in an SQLite database.
-
+    Pipeline for storing `subreddit_post_meta` spider data in the SQLite database.
     """
 
     def open_spider(self, spider):
         settings = get_project_settings()
-        databases_dir = settings.get("DB_DIR")
-        database_path = settings.get("SUBREDDIT_POST_META_DB_PATH")
 
-        os.makedirs(databases_dir, exist_ok=True)
+        db_dir = settings.get("DB_DIR")
+        db_path = settings.get("DB_PATH")
 
-        self.conn = sqlite3.connect(database_path)
+        os.makedirs(db_dir, exist_ok=True)
+
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
         self._create_posts_table()
 
     def close_spider(self, spider):
         self.conn.commit()
         self.conn.close()
-        logging.info(f"Closed SQLite database")
+        logging.info("Closed SQLite connection")
 
     def process_item(self, item, spider):
         item_dict = dict(item)
@@ -43,7 +43,7 @@ class SubredditPostMetaPipeline:
                 item_dict[key] = value
 
         self._insert_item(item_dict)
-        logging.debug(f"Inserted item into posts table in SQLite database")
+        logging.debug("Inserted item into posts table in SQLite database")
 
         return item
 
@@ -95,10 +95,9 @@ class SubredditPostMetaPipeline:
         );
         """
         self.cursor.execute(create_table_sql)
-        logging.info("Created posts table in SQLite database")
+        logging.info("Created 'posts' table in SQLite database")
 
     def _insert_item(self, item_dict):
-        """Inserts an item into the posts table"""
         columns = ", ".join(item_dict.keys())
         placeholders = ", ".join(["?"] * len(item_dict))
         insert_sql = f"INSERT OR REPLACE INTO posts ({columns}) VALUES ({placeholders})"
@@ -110,7 +109,6 @@ class SubredditPostMetaPipeline:
             logging.error(f"Error inserting item into posts table: {e}")
 
     def _extract_subreddit_from_permalink(self, permalink):
-        """Extracts the subreddit name from the given permalink URL"""
         if not permalink:
             return None
         parsed_url = urlparse(permalink)
@@ -119,29 +117,29 @@ class SubredditPostMetaPipeline:
             return path_parts[1]
         return None
 
+
 class SubredditListGenPipeline:
     """
-    Pipeline for storing scraped subreddit URLs from `subreddit_list_gen` spider into an SQLite database.
-    
+    Pipeline for storing scraped subreddit URLs from `subreddit_list_gen` spider in the SQLite database.
     """
 
     def open_spider(self, spider):
         settings = get_project_settings()
-        databases_dir = settings.get("DB_DIR")
-        database_path = settings.get("SUBREDDIT_LIST_GEN_DB_PATH")
+        db_dir = settings.get("DB_DIR")
+        db_path = settings.get("DB_PATH")
 
-        os.makedirs(databases_dir, exist_ok=True)
+        os.makedirs(db_dir, exist_ok=True)
 
-        self.conn = sqlite3.connect(database_path)
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
-        self.create_table()
+        self._create_subreddits_table()
 
     def close_spider(self, spider):
         self.conn.commit()
         self.conn.close()
-        logging.info(f"Closed SQLite database")
+        logging.info(f"Closed SQLite connection")
 
-    def create_table(self):
+    def _create_subreddits_table(self):
         """Creates the subreddits table if it doesn't already exist."""
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS subreddits (
@@ -149,14 +147,17 @@ class SubredditListGenPipeline:
         );
         """
         self.cursor.execute(create_table_sql)
-        logging.info("Created table 'subreddits' in subreddit_list_gen.db")
+        logging.info("Created `subreddits` table in SQLite database")
 
     def process_item(self, item, spider):
         try:
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 INSERT OR REPLACE INTO subreddits (url)
                 VALUES (?)
-            """, (item.get("url"),))
+            """,
+                (item.get("url"),),
+            )
             self.conn.commit()
             logging.debug(f"Inserted item into subreddits table: {item}")
         except sqlite3.Error as e:
