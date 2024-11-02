@@ -1,11 +1,10 @@
 import logging
+import sqlite3
 from json import JSONDecodeError
 from urllib.parse import urljoin
 
 from scrapy import Spider, Request
-
 from reddit_scraper.items import RedditPostItem
-from reddit_scraper.spiders.constants.start_urls import START_URLS
 
 
 class SubredditPostMetaSpider(Spider):
@@ -14,11 +13,9 @@ class SubredditPostMetaSpider(Spider):
 
     Example use from CLI:
         scrapy crawl subreddit_post_meta -a max_pages=10
-
     """
 
     name = "subreddit_post_meta"
-    start_urls = START_URLS
 
     custom_settings = {
         "ITEM_PIPELINES": {
@@ -32,7 +29,7 @@ class SubredditPostMetaSpider(Spider):
 
         Args:
             max_pages (int): The maximum number of pages (each page is a batch of approx 100 posts) to scrape per subreddit.
-                             Defaults to 1.
+                             Defaults to 1 page.
         """
         super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
         try:
@@ -45,15 +42,28 @@ class SubredditPostMetaSpider(Spider):
 
     def start_requests(self):
         """
-        Generates the initial requests for each subreddit with the specified limit and initial page.
+        Generates the initial requests for each subreddit URL retrieved from the 'subreddit_list_gen.db' database.
         """
-        for url in self.start_urls:
-            json_url = f"{url}.json?limit=100"
-            yield Request(
-                url=json_url,
-                callback=self.parse,
-                meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
-            )
+        database_path = "databases/subreddit_list_gen.db"
+        connection = sqlite3.connect(database_path)
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute("SELECT url FROM subreddits")
+            rows = cursor.fetchall()
+
+            for row in rows:
+                url = row[0]
+                json_url = f"{url}.json?limit=100"
+                yield Request(
+                    url=json_url,
+                    callback=self.parse,
+                    meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
+                )
+        except sqlite3.Error as e:
+            logging.error(f"Error accessing database {database_path}: {e}")
+        finally:
+            connection.close()
 
     def parse(self, response):
         """
