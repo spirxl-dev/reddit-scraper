@@ -7,6 +7,15 @@ from datetime import datetime, timezone
 from scrapy.utils.project import get_project_settings
 from scrapy.exceptions import DropItem
 
+class PostFullContentSpiderPipeline:
+    def open_spider(self,spider):
+        pass
+    def close_spider(self, spider):
+        pass
+
+    def process_item(self, item, spider):
+        pass
+
 
 class SubredditPostMetaPipeline:
     """
