@@ -3,6 +3,7 @@ import sqlite3
 import logging
 import json
 from urllib.parse import urlparse
+from datetime import datetime, timezone
 from scrapy.utils.project import get_project_settings
 from scrapy.exceptions import DropItem
 
@@ -31,8 +32,12 @@ class SubredditPostMetaPipeline:
 
     def process_item(self, item, spider):
         item_dict = dict(item)
+
         item_dict["subreddit"] = self._extract_subreddit_from_permalink(
             item.get("permalink")
+        )
+        item_dict["created_timestamp"] = self._convert_timestamp(
+            item.get("created_timestamp")
         )
 
         for key in item_dict:
@@ -116,6 +121,24 @@ class SubredditPostMetaPipeline:
         if len(path_parts) >= 3 and path_parts[0].lower() == "r":
             return path_parts[1]
         return None
+
+    def _convert_timestamp(self, timestamp):
+        """
+        Convert a timestamp (seconds since epoch) to a standard human-readable format.
+
+        Args:
+            timestamp (int): The timestamp to convert.
+
+        Returns:
+            str: The timestamp in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
+        """
+        try:
+            # Convert the timestamp to a timezone-aware datetime object
+            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            # Format the datetime object to ISO 8601 standard
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        except Exception as e:
+            return f"Error: {e}"
 
 
 class SubredditListGenPipeline:
