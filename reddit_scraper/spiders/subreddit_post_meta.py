@@ -52,7 +52,9 @@ class SubredditPostMetaSpider(Spider):
         cursor = connection.cursor()
 
         try:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'")
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'"
+            )
             table_exists = cursor.fetchone()
             if not table_exists:
                 raise CloseSpider("Subreddits table is missing in the database.")
@@ -60,7 +62,9 @@ class SubredditPostMetaSpider(Spider):
             cursor.execute("SELECT url FROM subreddits LIMIT 1")
             row = cursor.fetchone()
             if not row:
-                raise CloseSpider("Subreddits table is empty, please populate it with URLs.")
+                raise CloseSpider(
+                    "Subreddits table is empty, please populate it with URLs."
+                )
 
             cursor.execute("SELECT url FROM subreddits")
             rows = cursor.fetchall()
@@ -107,22 +111,10 @@ class SubredditPostMetaSpider(Spider):
                 created_timestamp=post_data.get("created_utc"),
                 upvotes=post_data.get("ups"),
                 post_body=post_data.get("selftext"),
-                post_content=post_data.get("selftext_html"),
                 post_title=post_data.get("title"),
                 id=post_data.get("id"),
-                name=post_data.get("name"),
                 url=post_data.get("url"),
                 score=post_data.get("score"),
-                num_crossposts=post_data.get("num_crossposts"),
-                over_18=post_data.get("over_18"),
-                spoiler=post_data.get("spoiler"),
-                locked=post_data.get("locked"),
-                stickied=post_data.get("stickied"),
-                distinguished=post_data.get("distinguished"),
-                is_original_content=post_data.get("is_original_content"),
-                is_self=post_data.get("is_self"),
-                author_fullname=post_data.get("author_fullname"),
-                author_premium=post_data.get("author_premium"),
                 media=post_data.get("media"),
                 media_metadata=post_data.get("media_metadata"),
                 preview=post_data.get("preview"),
@@ -130,18 +122,11 @@ class SubredditPostMetaSpider(Spider):
                 thumbnail_width=post_data.get("thumbnail_width"),
                 thumbnail_height=post_data.get("thumbnail_height"),
                 gallery_data=post_data.get("gallery_data"),
-                created=post_data.get("created"),
                 edited=post_data.get("edited"),
                 ups=post_data.get("ups"),
-                downs=post_data.get("downs"),
                 upvote_ratio=post_data.get("upvote_ratio"),
-                num_reports=post_data.get("num_reports"),
                 link_flair_text=post_data.get("link_flair_text"),
-                link_flair_css_class=post_data.get("link_flair_css_class"),
-                post_hint=post_data.get("post_hint"),
                 subreddit_subscribers=post_data.get("subreddit_subscribers"),
-                selftext=post_data.get("selftext"),
-                selftext_html=post_data.get("selftext_html"),
             )
             yield item
         logging.info(

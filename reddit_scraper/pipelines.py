@@ -39,6 +39,7 @@ class SubredditPostMetaPipeline:
         item_dict["created_timestamp"] = self._convert_timestamp(
             item.get("created_timestamp")
         )
+        item_dict["edited"] = self._convert_timestamp(item.get("edited"))
 
         for key in item_dict:
             value = item_dict[key]
@@ -57,46 +58,27 @@ class SubredditPostMetaPipeline:
         CREATE TABLE IF NOT EXISTS posts (
             id TEXT PRIMARY KEY,
             subreddit TEXT,
-            name TEXT,
             author TEXT,
-            author_fullname TEXT,
-            author_premium BOOLEAN,
             created_timestamp REAL,
-            upvotes INTEGER,
-            comments INTEGER,
-            permalink TEXT,
-            post_body TEXT,
-            post_content TEXT,
             post_title TEXT,
+            post_body TEXT,
             url TEXT,
+            permalink TEXT,
+            upvotes INTEGER,
             score INTEGER,
-            num_crossposts INTEGER,
-            over_18 BOOLEAN,
-            spoiler BOOLEAN,
-            locked BOOLEAN,
-            stickied BOOLEAN,
-            distinguished TEXT,
-            is_original_content BOOLEAN,
-            is_self BOOLEAN,
-            media TEXT,
-            media_metadata TEXT,
-            preview JSON,
+            upvote_ratio REAL,
+            ups INTEGER,
+            comments INTEGER,
+            link_flair_text TEXT,
             thumbnail TEXT,
             thumbnail_width INTEGER,
             thumbnail_height INTEGER,
+            preview JSON,
+            media TEXT,
+            media_metadata TEXT,
             gallery_data TEXT,
-            created REAL,
-            edited BOOLEAN,
-            ups INTEGER,
-            downs INTEGER,
-            upvote_ratio REAL,
-            num_reports INTEGER,
-            link_flair_text TEXT,
-            link_flair_css_class TEXT,
-            post_hint TEXT,
-            subreddit_subscribers INTEGER,
-            selftext TEXT,
-            selftext_html TEXT
+            edited REAL,
+            subreddit_subscribers INTEGER
         );
         """
         self.cursor.execute(create_table_sql)
@@ -133,6 +115,8 @@ class SubredditPostMetaPipeline:
             str: The timestamp in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
         """
         try:
+            if timestamp == 0:
+                return timestamp
             # Convert the timestamp to a timezone-aware datetime object
             dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             # Format the datetime object to ISO 8601 standard
