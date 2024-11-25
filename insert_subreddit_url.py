@@ -28,7 +28,7 @@ bitcoin_subreddit_urls = [
     "https://www.reddit.com/r/BitcoinAUS/new",
     "https://www.reddit.com/r/BitcoinCash/new",
     "https://www.reddit.com/r/CryptoCurrency/new",
-    "https://www.reddit.com/r/Crypto_General/",
+    "https://www.reddit.com/r/Crypto_General/new",
 ]
 
 for url in bitcoin_subreddit_urls:
