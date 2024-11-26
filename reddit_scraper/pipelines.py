@@ -9,6 +9,10 @@ from scrapy.exceptions import DropItem
 
 
 class PostFullContentSpiderPipeline:
+    """
+    Pipeline for storing `post_full_content` spider data in the SQLite database.
+    """
+
     def open_spider(self, spider):
         settings = get_project_settings()
 
@@ -119,6 +123,15 @@ class SubredditPostMetaPipeline:
         self.cursor.execute(create_table_sql)
         logging.info("Created 'posts' table in SQLite database")
 
+    def _extract_subreddit_from_permalink(self, permalink):
+        if not permalink:
+            return None
+        parsed_url = urlparse(permalink)
+        path_parts = parsed_url.path.strip("/").split("/")
+        if len(path_parts) >= 3 and path_parts[0].lower() == "r":
+            return path_parts[1]
+        return None
+
     def _insert_item(self, item_dict):
         columns = ", ".join(item_dict.keys())
         placeholders = ", ".join(["?"] * len(item_dict))
@@ -130,24 +143,12 @@ class SubredditPostMetaPipeline:
         except sqlite3.Error as e:
             logging.error(f"Error inserting item into posts table: {e}")
 
-    def _extract_subreddit_from_permalink(self, permalink):
-        if not permalink:
-            return None
-        parsed_url = urlparse(permalink)
-        path_parts = parsed_url.path.strip("/").split("/")
-        if len(path_parts) >= 3 and path_parts[0].lower() == "r":
-            return path_parts[1]
-        return None
+
 
     def _convert_timestamp(self, timestamp):
         """
-        Convert a timestamp (seconds since epoch) to a standard human-readable format.
+        Convert a timestamp (seconds since epoch) to ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ) format.
 
-        Args:
-            timestamp (int): The timestamp to convert.
-
-        Returns:
-            str: The timestamp in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
         """
         try:
             if timestamp == 0:
@@ -181,16 +182,6 @@ class SubredditListGenPipeline:
         self.conn.close()
         logging.info(f"Closed SQLite connection")
 
-    def _create_subreddits_table(self):
-        """Creates the subreddits table if it doesn't already exist."""
-        create_table_sql = """
-        CREATE TABLE IF NOT EXISTS subreddits (
-            url TEXT PRIMARY KEY
-        );
-        """
-        self.cursor.execute(create_table_sql)
-        logging.info("Created `subreddits` table in SQLite database")
-
     def process_item(self, item, spider):
         try:
             self.cursor.execute(
@@ -207,3 +198,13 @@ class SubredditListGenPipeline:
             raise DropItem(f"Failed to insert item: {item}")
 
         return item
+
+    def _create_subreddits_table(self):
+        """Creates the subreddits table if it doesn't already exist."""
+        create_table_sql = """
+        CREATE TABLE IF NOT EXISTS subreddits (
+            url TEXT PRIMARY KEY
+        );
+        """
+        self.cursor.execute(create_table_sql)
+        logging.info("Created `subreddits` table in SQLite database")
