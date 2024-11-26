@@ -25,6 +25,7 @@ def generate_files(num_proxies):
             f.write(f"  tor-{name}:\n")
             f.write(f"    container_name: 'tor-{name}'\n")
             f.write("    image: 'pickapp/tor-proxy:latest'\n")
+            f.write("    platform: 'linux/amd64'\n")
             f.write("    ports:\n")
             f.write(f"      - '{9990+index}:8888'\n")
             f.write("    environment:\n")
