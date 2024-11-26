@@ -29,7 +29,7 @@ class PostFullContentSpider(Spider):
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.PostFullContentSpiderPipeline": 1,
+            "reddit_scraper.pipelines.post_full_content_pipeline.PostFullContentSpiderPipeline": 1,
         }
     }
 

@@ -20,7 +20,7 @@ class SubredditListGenSpider(Spider):
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.SubredditListGenPipeline": 1,
+            "reddit_scraper.pipelines.subreddit_list_gen_pipeline.SubredditListGenPipeline": 1,
         }
     }
 
