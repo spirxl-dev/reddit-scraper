@@ -1,40 +1,26 @@
-from scrapy import Spider, Request
-import logging
+import praw
+import json
+
+# Authenticate with Reddit
+reddit = praw.Reddit(
+    client_id="XYr7CNOBXmFf0YS3GcHxQA",
+    client_secret="p-FaLlz5zK-QKmPoRHxhUtO7UbqPFQ",
+    user_agent="MyRedditBot/0.1 by YourUsername",
+)
+
+# Replace with the Reddit post ID
+post_id = "1gtri6k"  # Example post ID from the provided file
+submission = reddit.submission(id=post_id)
 
 
-class PostFullContentSpider(Spider):
-    """
-    A Scrapy spider that fetches the content of an individual Reddit post.
-    """
+# Fetch all comments
+submission.comments.replace_more(limit=None)  # Expand "more comments"
+all_comments = submission.comments.list()
 
-    name = "post_full_content"
-    allowed_domains = ["reddit.com"]
 
-    accounts = [
-        {
-            "client_id": "CLIENT_ID_1",
-            "client_secret": "SECRET_1",
-            "user_agent": "Agent_1",
-            "username": "user1",
-            "password": "pass1",
-        },
-        {
-            "client_id": "CLIENT_ID_2",
-            "client_secret": "SECRET_2",
-            "user_agent": "Agent_2",
-            "username": "user2",
-            "password": "pass2",
-        },
-    ]
-
-    custom_settings = {
-        "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.post_full_content_pipeline.PostFullContentSpiderPipeline": 1,
-        }
-    }
-
-    def start_requests(self):
-        pass
-
-    def parse(self, response):
-        pass
+comments_data = [
+    {"id": comment.id, "body": comment.body, "author": str(comment.author)}
+    for comment in all_comments
+]
+with open("comments.json", "w") as file:
+    json.dump(comments_data, file, indent=4)
