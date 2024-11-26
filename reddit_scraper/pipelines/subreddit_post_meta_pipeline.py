@@ -23,6 +23,7 @@ class SubredditPostMetaPipeline:
         self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
         self._create_posts_table()
+        self._create_comments_table()
 
     def close_spider(self, spider):
         self.conn.commit()
@@ -48,14 +49,17 @@ class SubredditPostMetaPipeline:
                 item_dict[key] = value
 
         self._insert_item(item_dict)
-        logging.debug("Inserted item into posts table in SQLite database")
+
+        self._sync_with_comments(item_dict["post_id"])
+
+        logging.debug("Inserted item into posts table and synced with comments table")
 
         return item
 
     def _create_posts_table(self):
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS posts (
-            id TEXT PRIMARY KEY,
+            post_id TEXT PRIMARY KEY,
             subreddit TEXT,
             author TEXT,
             created_timestamp REAL,
@@ -83,6 +87,18 @@ class SubredditPostMetaPipeline:
         self.cursor.execute(create_table_sql)
         logging.info("Created 'posts' table in SQLite database")
 
+    def _create_comments_table(self):
+        create_table_sql = """
+            CREATE TABLE IF NOT EXISTS comments (
+                post_id TEXT PRIMARY KEY,
+                body TEXT,
+                author TEXT,
+                FOREIGN KEY (post_id) REFERENCES posts (post_id)
+            );
+            """
+        self.cursor.execute(create_table_sql)
+        logging.info("Created 'comments' table in SQLite database")
+
     def _extract_subreddit_from_permalink(self, permalink):
         if not permalink:
             return None
@@ -103,17 +119,38 @@ class SubredditPostMetaPipeline:
         except sqlite3.Error as e:
             logging.error(f"Error inserting item into posts table: {e}")
 
+    def _sync_with_comments(self, post_id):
+        """
+        Ensure the `post_id` exists in the `comments` table. If not, insert it with placeholders.
+        """
+        try:
+            # Check if `post_id` already exists in the comments table
+            self.cursor.execute("SELECT 1 FROM comments WHERE post_id = ?", (post_id,))
+            exists = self.cursor.fetchone()
+
+            # Insert placeholder row into `comments` table if `post_id` is missing
+            if not exists:
+                self.cursor.execute(
+                    """
+                    INSERT INTO comments (post_id, body, author)
+                    VALUES (?, ?, ?)
+                    """,
+                    (post_id, None, None)
+                )
+                self.conn.commit()
+
+        except sqlite3.Error as e:
+            logging.error(f"Error syncing post_id {post_id} with comments table: {e}")
+
     def _convert_timestamp(self, timestamp):
         """
-        Convert a timestamp (seconds since epoch) to ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ) format.
-
+        Convert a timestamp (seconds since epoch) to ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
         """
         try:
             if timestamp == 0:
                 return timestamp
-            # Convert the timestamp to a timezone-aware datetime object
             dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-            # Format the datetime object to ISO 8601 standard
             return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         except Exception as e:
-            return f"Error: {e}"
+            logging.error(f"Error converting timestamp: {e}")
+            return None

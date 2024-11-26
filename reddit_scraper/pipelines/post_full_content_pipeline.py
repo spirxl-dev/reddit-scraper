@@ -32,11 +32,10 @@ class PostFullContentSpiderPipeline:
     def _create_comments_table(self):
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS comments (
-                id TEXT PRIMARY KEY,
-                post_id TEXT,
+                post_id TEXT PRIMARY KEY,
                 body TEXT,
                 author TEXT,
-                FOREIGN KEY (post_id) REFERENCES posts (id)
+                FOREIGN KEY (post_id) REFERENCES posts (post_id)
             );
             """
         self.cursor.execute(create_table_sql)

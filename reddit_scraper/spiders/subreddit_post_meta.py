@@ -48,10 +48,12 @@ class SubredditPostMetaSpider(Spider):
         """
         settings = get_project_settings()
         database_path = settings.get("DB_PATH")
-        connection = sqlite3.connect(database_path)
-        cursor = connection.cursor()
 
         try:
+
+            connection = sqlite3.connect(database_path)
+            cursor = connection.cursor()
+
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'"
             )
@@ -112,7 +114,7 @@ class SubredditPostMetaSpider(Spider):
                 upvotes=post_data.get("ups"),
                 post_body=post_data.get("selftext"),
                 post_title=post_data.get("title"),
-                id=post_data.get("id"),
+                post_id=post_data.get("id"),
                 url=post_data.get("url"),
                 score=post_data.get("score"),
                 media=post_data.get("media"),

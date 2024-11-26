@@ -13,7 +13,7 @@ class RedditPostItem(scrapy.Item):
     post_title = scrapy.Field()
     post_body = scrapy.Field()
     url = scrapy.Field()
-    id = scrapy.Field()
+    post_id = scrapy.Field()
 
     # Engagement metrics
     upvotes = scrapy.Field()
