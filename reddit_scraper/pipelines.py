@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from scrapy.utils.project import get_project_settings
 from scrapy.exceptions import DropItem
 
-
 class PostFullContentSpiderPipeline:
     """
     Pipeline for storing `post_full_content` spider data in the SQLite database.
@@ -142,8 +141,6 @@ class SubredditPostMetaPipeline:
             self.conn.commit()
         except sqlite3.Error as e:
             logging.error(f"Error inserting item into posts table: {e}")
-
-
 
     def _convert_timestamp(self, timestamp):
         """
