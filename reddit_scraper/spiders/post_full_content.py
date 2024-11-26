@@ -9,6 +9,24 @@ class PostFullContentSpider(Spider):
     """
 
     name = "post_full_content"
+    allowed_domains = ["reddit.com"]
+
+    accounts = [
+        {
+            "client_id": "CLIENT_ID_1",
+            "client_secret": "SECRET_1",
+            "user_agent": "Agent_1",
+            "username": "user1",
+            "password": "pass1",
+        },
+        {
+            "client_id": "CLIENT_ID_2",
+            "client_secret": "SECRET_2",
+            "user_agent": "Agent_2",
+            "username": "user2",
+            "password": "pass2",
+        },
+    ]
 
     custom_settings = {
         "ITEM_PIPELINES": {
