@@ -5,11 +5,10 @@ DEFAULT_PATH = "/new"  # Default subreddit path
 ENABLE_HOT = False      # Include /hot
 ENABLE_TOP = False     # Include /top with variations
 
+# Database setup
 db_path = "data.db"
-
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
-
 cursor.execute(
     """
 CREATE TABLE IF NOT EXISTS subreddits (
@@ -19,6 +18,7 @@ CREATE TABLE IF NOT EXISTS subreddits (
 """
 )
 
+# URL setup and database operations
 base_subreddit_urls = [
     "https://www.reddit.com/r/Bitcoin",
     "https://www.reddit.com/r/BitcoinBeginners",

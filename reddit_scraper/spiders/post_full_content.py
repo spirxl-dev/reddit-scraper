@@ -28,7 +28,7 @@ async def fetch_comments(praw_client, post_id):
         ]
 
         print(f"Fetched {len(comments_data)} comments for post ID {post_id}.")
-        time.sleep(0.25)
+        time.sleep(0.25)  # Rate-limiting
         return comments_data
 
     except Exception as e:
@@ -38,7 +38,7 @@ async def fetch_comments(praw_client, post_id):
 
 async def main():
     """
-    Main function to fetch comments for all post IDs in the database and print them to the terminal.
+    Main function to fetch comments for all post IDs in the database and ensure clean integration.
     """
 
     praw = Reddit(
@@ -65,6 +65,17 @@ async def main():
 
         for post_id in post_ids:
             comments = await fetch_comments(praw, post_id)
+
+            cursor.execute(
+                """
+                DELETE FROM comments
+                WHERE post_id = ? AND author IS NULL AND body IS NULL;
+                """,
+                (post_id,),
+            )
+            connection.commit()
+
+            # Insert fetched comments
             for comment in comments:
                 cursor.execute(
                     """
@@ -73,7 +84,8 @@ async def main():
                     """,
                     (comment["post_id"], comment["body"], comment["author"]),
                 )
-                connection.commit()
+            connection.commit()
+
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
 

@@ -80,7 +80,6 @@ class SubredditPostMetaPipeline:
 
         self._insert_item(item_dict)
 
-        # Ensure the `post_id` exists in the `comments` table for future comments syncing
         self._sync_with_comments(item_dict["post_id"])
 
         logging.debug("Inserted item into posts table and synced with comments table")
