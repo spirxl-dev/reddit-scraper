@@ -11,9 +11,12 @@ from reddit_scraper.items import RedditPostItem
 
 class SubredditPostMetaSpider(Spider):
     """
-    A Scrapy spider that scrapes metadata from posts in multiple subreddits using Reddit's JSON endpoints.
+    A Scrapy spider for scraping metadata from posts in multiple subreddits using Reddit's JSON API.
 
-    Example use from CLI:
+    This spider fetches subreddit URLs from a SQLite database and scrapes post data
+    (e.g., author, title, score, comments, etc.) using Reddit's JSON API endpoint.
+
+    Example usage from CLI:
         scrapy crawl subreddit_post_meta -a max_pages=10
     """
 
@@ -27,7 +30,7 @@ class SubredditPostMetaSpider(Spider):
 
     def __init__(self, max_pages=1, *args, **kwargs):
         """
-        Initialises the spider with a maximum number of pages to scrape per subreddit.
+        Initialises the spider with max_pages to scrape per subreddit.
 
         Args:
             max_pages (int): The maximum number of pages (each page is a batch of approx 100 posts) to scrape per subreddit.
@@ -39,21 +42,28 @@ class SubredditPostMetaSpider(Spider):
             if self.max_pages < 1:
                 raise ValueError
         except ValueError:
-            logging.error("Invalid `max_pages` value. Should be a positive integer.")
+            logging.error(
+                "Invalid `max_pages` value. Must be a positive integer. Defaulting to 1."
+            )
             self.max_pages = 1
 
     def start_requests(self):
         """
-        Generates the initial requests for each subreddit URL retrieved from the 'subreddit_list_gen.db' database.
+        Generates initial HTTP requests for each subreddit URL stored in the SQLite database.
+
+        This method:
+        - Connects to the SQLite database defined in the project settings.
+        - Ensures the 'subreddits' table exists and contains subreddit URLs.
+        - Retrieves subreddit URLs and generates requests for their JSON endpoints.
         """
         settings = get_project_settings()
         database_path = settings.get("DB_PATH")
 
         try:
-
             connection = sqlite3.connect(database_path)
             cursor = connection.cursor()
 
+            # Check if the 'subreddits' table exists
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'"
             )
@@ -61,35 +71,44 @@ class SubredditPostMetaSpider(Spider):
             if not table_exists:
                 raise CloseSpider("Subreddits table is missing in the database.")
 
+            # Check if the 'subreddits' table contains any data
             cursor.execute("SELECT url FROM subreddits LIMIT 1")
             row = cursor.fetchone()
             if not row:
                 raise CloseSpider(
-                    "Subreddits table is empty, please populate it with URLs."
+                    "Subreddits table is empty. Populate it with subreddit URLs."
                 )
 
+            # Retrieve all subreddit URLs and generate initial requests
             cursor.execute("SELECT url FROM subreddits")
             rows = cursor.fetchall()
 
             for row in rows:
                 url = row[0]
-                json_url = f"{url}.json?limit=100"
+                json_url = f"{url}.json?limit=100"  # Reddits API max limit is 100
                 yield Request(
                     url=json_url,
                     callback=self.parse,
                     meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
                 )
         except sqlite3.Error:
-            raise CloseSpider("Database error encountered.")
+            raise CloseSpider(
+                "Database error encountered while accessing subreddit URLs."
+            )
         finally:
             connection.close()
 
     def parse(self, response):
         """
-        Parses the JSON response and handles pagination.
+        Parses the JSON response from the Reddit API and extracts post metadata.
+
+        This method:
+        - Decodes the JSON response and retrieves post data.
+        - Yields post data as `RedditPostItem` objects.
+        - Handles pagination by recursively requesting the next batch of posts (if available and within `max_pages`).
 
         Args:
-            response (scrapy.http.Response): The HTTP response object.
+            response (scrapy.http.Response): The HTTP response object containing subreddit JSON data.
         """
         try:
             data = response.json()
@@ -135,6 +154,7 @@ class SubredditPostMetaSpider(Spider):
             f"Scraped {num_posts} posts from subreddit: {start_url} (Page {current_page})"
         )
 
+        # Handle pagination if 'after' token is provided and max pages not exceeded
         after = data.get("data", {}).get("after")
         if after and current_page < max_pages:
             next_page = current_page + 1

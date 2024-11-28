@@ -1,5 +1,10 @@
 import sqlite3
 
+# Config
+DEFAULT_PATH = "/new"  # Default subreddit path
+ENABLE_HOT = False     # Include /hot
+ENABLE_TOP = False     # Include /top with variations
+
 db_path = "database/data.db"
 
 conn = sqlite3.connect(db_path)
@@ -31,14 +36,15 @@ base_subreddit_urls = [
 
 subreddit_urls = []
 for base_url in base_subreddit_urls:
-    subreddit_urls.append(f"{base_url}/new")
-    subreddit_urls.append(f"{base_url}/hot")
-    subreddit_urls.append(f"{base_url}/top")
-    subreddit_urls.append(f"{base_url}/top/?t=all")
-    subreddit_urls.append(f"{base_url}/top/?t=year")
-    subreddit_urls.append(f"{base_url}/top/?t=month")
-    subreddit_urls.append(f"{base_url}/top/?t=day")
-
+    subreddit_urls.append(f"{base_url}{DEFAULT_PATH}")
+    if ENABLE_HOT:
+        subreddit_urls.append(f"{base_url}/hot")
+    if ENABLE_TOP:
+        subreddit_urls.append(f"{base_url}/top")
+        subreddit_urls.append(f"{base_url}/top/?t=all")
+        subreddit_urls.append(f"{base_url}/top/?t=year")
+        subreddit_urls.append(f"{base_url}/top/?t=month")
+        subreddit_urls.append(f"{base_url}/top/?t=day")
 
 for url in subreddit_urls:
     try:
@@ -49,4 +55,4 @@ for url in subreddit_urls:
 conn.commit()
 conn.close()
 
-print("All subreddit URL variations have been successfully inserted into the database.")
+print("Subreddit URLs have been successfully inserted into the database.")
