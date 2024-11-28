@@ -2,7 +2,7 @@ from faker import Faker
 
 fake = Faker(["en_US", "en_GB", "en_CA", "en_AU", "en_NZ", "en_IE", "en_IN"])
 
-# Set the number of uniquely named proxies to generate and the IP change interval. testing shows to not go above 10 proxies.
+# Testing shows to not go above 10 proxies with this specific image
 NUM_PROXIES = 10
 IP_CHANGE_SECONDS = 60
 
@@ -25,7 +25,6 @@ def generate_files(num_proxies):
             f.write(f"  tor-{name}:\n")
             f.write(f"    container_name: 'tor-{name}'\n")
             f.write("    image: 'pickapp/tor-proxy:latest'\n")
-            f.write("    platform: 'linux/amd64'\n")
             f.write("    ports:\n")
             f.write(f"      - '{9990+index}:8888'\n")
             f.write("    environment:\n")
