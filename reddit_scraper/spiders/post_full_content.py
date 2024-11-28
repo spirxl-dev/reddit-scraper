@@ -1,69 +1,86 @@
-from pprint import pprint
-from scrapy import Spider, Request
+"""Because of the way scrapy works, this will be a script because its a pain to use PRAW with scrapy. soz"""
+
+import asyncio
 import sqlite3
-from scrapy.exceptions import CloseSpider
-from scrapy.utils.project import get_project_settings
+import json
+import time
+from asyncpraw import Reddit
 
 
-class PostFullContentSpider(Spider):
+async def fetch_comments(praw_client, post_id):
     """
-    A Scrapy spider that fetches the content of an individual Reddit post using PRAW.
+    Fetch all comments for a given Reddit post ID using Async PRAW.
+    Args:
+        praw_client (asyncpraw.Reddit): The Async PRAW client instance.
+        post_id (str): The Reddit post ID.
+    Returns:
+        list: A list of comment dictionaries with comment_id, body, and author.
+    """
+    try:
+        submission = await praw_client.submission(id=post_id)
+        await submission.comments.replace_more(limit=10)
+        all_comments = submission.comments.list()
+
+        comments_data = [
+            {
+                "comment_id": comment.id,
+                "body": comment.body,
+                "author": str(comment.author) if comment.author else "[deleted]",
+            }
+            for comment in all_comments
+        ]
+
+        print(f"Fetched {len(comments_data)} comments for post ID {post_id}.")
+        time.sleep(0.5)
+        return comments_data
+
+    except Exception as e:
+        print(f"Error fetching comments for post ID {post_id}: {e}")
+        return []
+
+
+async def main():
+    """
+    Main function to fetch comments for all post IDs in the database.
     """
 
-    name = "post_full_content"
+    praw = Reddit(
+        client_id="XYr7CNOBXmFf0YS3GcHxQA",
+        client_secret="p-FaLlz5zK-QKmPoRHxhUtO7UbqPFQ",
+        user_agent="MyRedditBot/1.0 by YourUsername",
+    )
 
-    custom_settings = {
-        "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.post_full_content_pipeline.PostFullContentSpiderPipeline": 1,
-        }
-    }
+    database_path = "database/data.db"
+    connection = sqlite3.connect(database_path)
+    cursor = connection.cursor()
 
-    accounts = [
-        {
-            "client_id": "CLIENT_ID_1",
-            "client_secret": "SECRET_1",
-            "user_agent": "Agent_1",
-            "username": "user1",
-            "password": "pass1",
-        },
-        {
-            "client_id": "CLIENT_ID_2",
-            "client_secret": "SECRET_2",
-            "user_agent": "Agent_2",
-            "username": "user2",
-            "password": "pass2",
-        },
-    ]
+    try:
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='comments'"
+        )
+        if not cursor.fetchone():
+            print("The `comments` table does not exist in the database.")
+            return
 
-    def start_requests(self):
-        settings = get_project_settings()
-        database_path = settings.get("DB_PATH")
+        cursor.execute("SELECT DISTINCT post_id FROM comments;")
+        post_ids = [row[0] for row in cursor.fetchall()]
+        print(f"Found {len(post_ids)} post IDs to process.")
 
-        try:
-            connection = sqlite3.connect(database_path)
-            cursor = connection.cursor()
+        all_comments = []
+        for post_id in post_ids:
+            comments = await fetch_comments(praw, post_id)
+            all_comments.extend(comments)
 
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='comments'"
-            )
-            table_exists = cursor.fetchone()
+        with open("comments.json", "w") as file:
+            json.dump(all_comments, file, indent=4)
+        print(f"Saved {len(all_comments)} comments to comments.json.")
 
-            if not table_exists:
-                raise CloseSpider("comments table is missing in the database.")
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
 
-            cursor.execute("SELECT post_id FROM comments LIMIT 1")
-            row = cursor.fetchone()
-            if not row:
-                raise CloseSpider("comments table is empty, please populate it.")
+    finally:
+        connection.close()
 
-            cursor.execute("SELECT url FROM comments")
-            post_ids: list = cursor.fetchall()
-            pprint(post_ids)
 
-        except sqlite3.Error:
-            raise CloseSpider("Database error encountered.")
-        finally:
-            connection.close()
-
-    def parse(self, response):
-        pass
+if __name__ == "__main__":
+    asyncio.run(main())

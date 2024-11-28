@@ -85,7 +85,7 @@ class SubredditPostMetaSpider(Spider):
 
             for row in rows:
                 url = row[0]
-                json_url = f"{url}.json?limit=100"  # Reddits API max limit is 100
+                json_url = url
                 yield Request(
                     url=json_url,
                     callback=self.parse,
@@ -120,9 +120,17 @@ class SubredditPostMetaSpider(Spider):
         current_page = response.meta.get("page", 1)
         max_pages = response.meta.get("max_pages", 1)
 
+        # Extract posts from the JSON response
         posts = data.get("data", {}).get("children", [])
         num_posts = len(posts)
 
+        if num_posts == 0:
+            logging.warning(
+                f"No posts found in subreddit: {start_url} (Page {current_page})"
+            )
+            return
+
+        # Process and yield post items
         for post in posts:
             post_data = post["data"]
             item = RedditPostItem(
@@ -150,6 +158,7 @@ class SubredditPostMetaSpider(Spider):
                 subreddit_subscribers=post_data.get("subreddit_subscribers"),
             )
             yield item
+
         logging.info(
             f"Scraped {num_posts} posts from subreddit: {start_url} (Page {current_page})"
         )
@@ -158,7 +167,17 @@ class SubredditPostMetaSpider(Spider):
         after = data.get("data", {}).get("after")
         if after and current_page < max_pages:
             next_page = current_page + 1
-            next_json_url = f"{start_url}.json?after={after}&limit=100"
+
+            # Correctly construct the pagination URL
+            if ".json?limit=100" in start_url:
+                next_json_url = f"{start_url}&after={after}"
+            else:
+                next_json_url = f"{start_url}/.json?after={after}&limit=100"
+
+            logging.info(
+                f"Fetching next page for subreddit: {start_url} (Page {next_page})"
+            )
+
             yield Request(
                 url=next_json_url,
                 callback=self.parse,
