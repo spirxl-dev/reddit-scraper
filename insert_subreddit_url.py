@@ -1,5 +1,3 @@
-"""Helper script to manual insert urls into subreddit table"""
-
 import sqlite3
 
 db_path = "database/data.db"
@@ -16,22 +14,33 @@ CREATE TABLE IF NOT EXISTS subreddits (
 """
 )
 
-bitcoin_subreddit_urls = [
-    "https://www.reddit.com/r/Bitcoin/new",
-    "https://www.reddit.com/r/BitcoinBeginners/new",
-    "https://www.reddit.com/r/BitcoinMarkets/new",
-    "https://www.reddit.com/r/btc/new",
-    "https://www.reddit.com/r/BitcoinTrading/new",
-    "https://www.reddit.com/r/BitcoinUK/new",
-    "https://www.reddit.com/r/BitcoinMining/new",
-    "https://www.reddit.com/r/BitcoinCA/new",
-    "https://www.reddit.com/r/BitcoinAUS/new",
-    "https://www.reddit.com/r/BitcoinCash/new",
-    "https://www.reddit.com/r/CryptoCurrency/new",
-    "https://www.reddit.com/r/Crypto_General/new",
+base_subreddit_urls = [
+    "https://www.reddit.com/r/Bitcoin",
+    "https://www.reddit.com/r/BitcoinBeginners",
+    "https://www.reddit.com/r/BitcoinMarkets",
+    "https://www.reddit.com/r/btc",
+    "https://www.reddit.com/r/BitcoinTrading",
+    "https://www.reddit.com/r/BitcoinUK",
+    "https://www.reddit.com/r/BitcoinMining",
+    "https://www.reddit.com/r/BitcoinCA",
+    "https://www.reddit.com/r/BitcoinAUS",
+    "https://www.reddit.com/r/BitcoinCash",
+    "https://www.reddit.com/r/CryptoCurrency",
+    "https://www.reddit.com/r/Crypto_General",
 ]
 
-for url in bitcoin_subreddit_urls:
+subreddit_urls = []
+for base_url in base_subreddit_urls:
+    subreddit_urls.append(f"{base_url}/new")
+    subreddit_urls.append(f"{base_url}/hot")
+    subreddit_urls.append(f"{base_url}/top")
+    subreddit_urls.append(f"{base_url}/top/?t=all")
+    subreddit_urls.append(f"{base_url}/top/?t=year")
+    subreddit_urls.append(f"{base_url}/top/?t=month")
+    subreddit_urls.append(f"{base_url}/top/?t=day")
+
+
+for url in subreddit_urls:
     try:
         cursor.execute("INSERT OR IGNORE INTO subreddits (url) VALUES (?)", (url,))
     except sqlite3.Error as e:
@@ -40,4 +49,4 @@ for url in bitcoin_subreddit_urls:
 conn.commit()
 conn.close()
 
-print("Subreddits have been successfully inserted into the database.")
+print("All subreddit URL variations have been successfully inserted into the database.")
