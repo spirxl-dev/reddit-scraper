@@ -1,8 +1,5 @@
-"""Because of the way scrapy works, this will be a script because its a pain to use PRAW with scrapy. soz"""
-
 import asyncio
 import sqlite3
-import json
 import time
 from asyncpraw import Reddit
 
@@ -14,7 +11,7 @@ async def fetch_comments(praw_client, post_id):
         praw_client (asyncpraw.Reddit): The Async PRAW client instance.
         post_id (str): The Reddit post ID.
     Returns:
-        list: A list of comment dictionaries with comment_id, body, and author.
+        list: A list of comment dictionaries with post_id, body, and author.
     """
     try:
         submission = await praw_client.submission(id=post_id)
@@ -23,7 +20,7 @@ async def fetch_comments(praw_client, post_id):
 
         comments_data = [
             {
-                "comment_id": comment.id,
+                "post_id": post_id,
                 "body": comment.body,
                 "author": str(comment.author) if comment.author else "[deleted]",
             }
@@ -31,7 +28,7 @@ async def fetch_comments(praw_client, post_id):
         ]
 
         print(f"Fetched {len(comments_data)} comments for post ID {post_id}.")
-        time.sleep(0.5)
+        time.sleep(0.25)
         return comments_data
 
     except Exception as e:
@@ -41,7 +38,7 @@ async def fetch_comments(praw_client, post_id):
 
 async def main():
     """
-    Main function to fetch comments for all post IDs in the database.
+    Main function to fetch comments for all post IDs in the database and print them to the terminal.
     """
 
     praw = Reddit(
@@ -66,15 +63,17 @@ async def main():
         post_ids = [row[0] for row in cursor.fetchall()]
         print(f"Found {len(post_ids)} post IDs to process.")
 
-        all_comments = []
         for post_id in post_ids:
             comments = await fetch_comments(praw, post_id)
-            all_comments.extend(comments)
-
-        with open("comments.json", "w") as file:
-            json.dump(all_comments, file, indent=4)
-        print(f"Saved {len(all_comments)} comments to comments.json.")
-
+            for comment in comments:
+                cursor.execute(
+                    """
+                    INSERT INTO comments (post_id, body, author)
+                    VALUES (?, ?, ?)
+                    """,
+                    (comment["post_id"], comment["body"], comment["author"]),
+                )
+                connection.commit()
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
 
