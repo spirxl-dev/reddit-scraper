@@ -125,10 +125,11 @@ class SubredditPostMetaPipeline:
         Creates the `comments` table if it does not exist in the SQLite database.
         """
         create_table_sql = """
-        CREATE TABLE IF NOT EXISTS comments (
-            post_id TEXT PRIMARY KEY,
+        CREATE TABLE comments (
+            post_id TEXT,
             body TEXT,
             author TEXT,
+            PRIMARY KEY (post_id, body),
             FOREIGN KEY (post_id) REFERENCES posts (post_id)
         );
         """

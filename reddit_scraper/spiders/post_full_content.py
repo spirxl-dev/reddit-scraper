@@ -28,7 +28,7 @@ async def fetch_comments(praw_client, post_id):
         ]
 
         print(f"Fetched {len(comments_data)} comments for post ID {post_id}.")
-        time.sleep(0.25)  # Rate-limiting
+        time.sleep(0.25)
         return comments_data
 
     except Exception as e:
@@ -75,11 +75,10 @@ async def main():
             )
             connection.commit()
 
-            # Insert fetched comments
             for comment in comments:
                 cursor.execute(
                     """
-                    INSERT INTO comments (post_id, body, author)
+                    INSERT OR IGNORE INTO comments (post_id, body, author)
                     VALUES (?, ?, ?)
                     """,
                     (comment["post_id"], comment["body"], comment["author"]),
@@ -91,6 +90,7 @@ async def main():
 
     finally:
         connection.close()
+        await praw.close()
 
 
 if __name__ == "__main__":
