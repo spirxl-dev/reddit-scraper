@@ -21,7 +21,7 @@ class SubredditPostMetaSpider(Spider):
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.subreddit_post_meta_pipeline.SubredditPostMetaPipeline": 1,
+            "reddit_scraper.pipelines.SubredditPostMetaPipeline": 1,
         }
     }
 
@@ -113,19 +113,8 @@ class SubredditPostMetaSpider(Spider):
                 post_body=post_data.get("selftext"),
                 post_title=post_data.get("title"),
                 id=post_data.get("id"),
-                url=post_data.get("url"),
-                score=post_data.get("score"),
-                media=post_data.get("media"),
-                media_metadata=post_data.get("media_metadata"),
-                preview=post_data.get("preview"),
-                thumbnail=post_data.get("thumbnail"),
-                thumbnail_width=post_data.get("thumbnail_width"),
-                thumbnail_height=post_data.get("thumbnail_height"),
-                gallery_data=post_data.get("gallery_data"),
                 edited=post_data.get("edited"),
-                ups=post_data.get("ups"),
                 upvote_ratio=post_data.get("upvote_ratio"),
-                link_flair_text=post_data.get("link_flair_text"),
                 subreddit_subscribers=post_data.get("subreddit_subscribers"),
             )
             yield item

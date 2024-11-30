@@ -17,19 +17,5 @@ class RedditPostItem(scrapy.Item):
 
     # Engagement metrics
     upvotes = scrapy.Field()
-    ups = scrapy.Field()
-    score = scrapy.Field()
     upvote_ratio = scrapy.Field()
     comments = scrapy.Field()
-    
-    # Flair and appearance
-    link_flair_text = scrapy.Field()
-
-    # Media and preview information
-    media = scrapy.Field()
-    media_metadata = scrapy.Field()
-    preview = scrapy.Field()
-    thumbnail = scrapy.Field()
-    thumbnail_width = scrapy.Field()
-    thumbnail_height = scrapy.Field()
-    gallery_data = scrapy.Field()
