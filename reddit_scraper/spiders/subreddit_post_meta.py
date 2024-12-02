@@ -1,174 +1,464 @@
-import logging
 import sqlite3
-from json import JSONDecodeError
+import json
+import requests
+import logging
 from urllib.parse import urljoin
 
-from scrapy import Spider, Request
-from scrapy.exceptions import CloseSpider
-from scrapy.utils.project import get_project_settings
-from reddit_scraper.items import RedditPostItem
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Database configuration
+DATABASE_PATH = "database/data.db"
+SUBREDDIT_TABLE = "subreddits"
+POSTS_TABLE = "posts"
+
+# Scraping configuration
+POSTS_PER_PAGE = 100
 
 
-class SubredditPostMetaSpider(Spider):
+def setup_database():
     """
-    A Scrapy spider for scraping metadata from posts in multiple subreddits using Reddit's JSON API.
-
-    This spider fetches subreddit URLs from a SQLite database and scrapes post data
-    (e.g., author, title, score, comments, etc.) using Reddit's JSON API endpoint.
-
-    Example usage from CLI:
-        scrapy crawl subreddit_post_meta -a max_pages=10
+    Set up the SQLite database with the required tables.
     """
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
 
-    name = "subreddit_post_meta"
-
-    custom_settings = {
-        "ITEM_PIPELINES": {
-            "reddit_scraper.pipelines.SubredditPostMetaPipeline": 1,
-        }
-    }
-
-    def __init__(self, max_pages=1, *args, **kwargs):
-        """
-        Initialises the spider with max_pages to scrape per subreddit.
-
-        Args:
-            max_pages (int): The maximum number of pages (each page is a batch of approx 100 posts) to scrape per subreddit.
-                             Defaults to 1 page.
-        """
-        super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
-        try:
-            self.max_pages = int(max_pages)
-            if self.max_pages < 1:
-                raise ValueError
-        except ValueError:
-            logging.error(
-                "Invalid `max_pages` value. Must be a positive integer. Defaulting to 1."
-            )
-            self.max_pages = 1
-
-    def start_requests(self):
-        """
-        Generates initial HTTP requests for each subreddit URL stored in the SQLite database.
-
-        This method:
-        - Connects to the SQLite database defined in the project settings.
-        - Ensures the 'subreddits' table exists and contains subreddit URLs.
-        - Retrieves subreddit URLs and generates requests for their JSON endpoints.
-        """
-        settings = get_project_settings()
-        database_path = settings.get("DB_PATH")
-
-        try:
-            connection = sqlite3.connect(database_path)
-            cursor = connection.cursor()
-
-            # Check if the 'subreddits' table exists
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='subreddits'"
-            )
-            table_exists = cursor.fetchone()
-            if not table_exists:
-                raise CloseSpider("Subreddits table is missing in the database.")
-
-            # Check if the 'subreddits' table contains any data
-            cursor.execute("SELECT url FROM subreddits LIMIT 1")
-            row = cursor.fetchone()
-            if not row:
-                raise CloseSpider(
-                    "Subreddits table is empty. Populate it with subreddit URLs."
-                )
-
-            # Retrieve all subreddit URLs and generate initial requests
-            cursor.execute("SELECT url FROM subreddits")
-            rows = cursor.fetchall()
-
-            for row in rows:
-                url = row[0]
-                json_url = f"{url}.json?limit=100"  # Reddits API max limit is 100
-                yield Request(
-                    url=json_url,
-                    callback=self.parse,
-                    meta={"start_url": url, "page": 1, "max_pages": self.max_pages},
-                )
-        except sqlite3.Error:
-            raise CloseSpider(
-                "Database error encountered while accessing subreddit URLs."
-            )
-        finally:
-            connection.close()
-
-    def parse(self, response):
-        """
-        Parses the JSON response from the Reddit API and extracts post metadata.
-
-        This method:
-        - Decodes the JSON response and retrieves post data.
-        - Yields post data as `RedditPostItem` objects.
-        - Handles pagination by recursively requesting the next batch of posts (if available and within `max_pages`).
-
-        Args:
-            response (scrapy.http.Response): The HTTP response object containing subreddit JSON data.
-        """
-        try:
-            data = response.json()
-        except JSONDecodeError:
-            logging.error(f"Failed to decode JSON from {response.url}")
-            return
-
-        start_url = response.meta.get("start_url")
-        current_page = response.meta.get("page", 1)
-        max_pages = response.meta.get("max_pages", 1)
-
-        posts = data.get("data", {}).get("children", [])
-        num_posts = len(posts)
-
-        for post in posts:
-            post_data = post["data"]
-            item = RedditPostItem(
-                author=post_data.get("author"),
-                comments=post_data.get("num_comments"),
-                permalink=urljoin("https://www.reddit.com", post_data.get("permalink")),
-                created_timestamp=post_data.get("created_utc"),
-                upvotes=post_data.get("ups"),
-                post_body=post_data.get("selftext"),
-                post_title=post_data.get("title"),
-                post_id=post_data.get("id"),
-                url=post_data.get("url"),
-                score=post_data.get("score"),
-                media=post_data.get("media"),
-                media_metadata=post_data.get("media_metadata"),
-                preview=post_data.get("preview"),
-                thumbnail=post_data.get("thumbnail"),
-                thumbnail_width=post_data.get("thumbnail_width"),
-                thumbnail_height=post_data.get("thumbnail_height"),
-                gallery_data=post_data.get("gallery_data"),
-                edited=post_data.get("edited"),
-                ups=post_data.get("ups"),
-                upvote_ratio=post_data.get("upvote_ratio"),
-                link_flair_text=post_data.get("link_flair_text"),
-                subreddit_subscribers=post_data.get("subreddit_subscribers"),
-            )
-            yield item
-        logging.info(
-            f"Scraped {num_posts} posts from subreddit: {start_url} (Page {current_page})"
+    # Create subreddits table
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {SUBREDDIT_TABLE} (
+            id INTEGER PRIMARY KEY,
+            url TEXT NOT NULL UNIQUE
         )
+        """
+    )
 
-        # Handle pagination if 'after' token is provided and max pages not exceeded
-        after = data.get("data", {}).get("after")
-        if after and current_page < max_pages:
-            next_page = current_page + 1
-            next_json_url = f"{start_url}.json?after={after}&limit=100"
-            yield Request(
-                url=next_json_url,
-                callback=self.parse,
-                meta={
-                    "start_url": start_url,
-                    "page": next_page,
-                    "max_pages": max_pages,
-                },
-            )
-        elif after and current_page >= max_pages:
-            logging.info(f"Reached max_pages={max_pages} for subreddit: {start_url}")
-        else:
-            logging.info(f"No more pages to scrape for subreddit: {start_url}")
+    # Create posts table
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {POSTS_TABLE} (
+            post_id TEXT PRIMARY KEY,
+            subreddit TEXT,
+            author TEXT,
+            created_timestamp REAL,
+            post_title TEXT,
+            post_body TEXT,
+            url TEXT,
+            permalink TEXT,
+            upvotes INTEGER,
+            score INTEGER,
+            upvote_ratio REAL,
+            ups INTEGER,
+            comments INTEGER,
+            link_flair_text TEXT,
+            thumbnail TEXT,
+            thumbnail_width INTEGER,
+            thumbnail_height INTEGER,
+            preview TEXT,
+            media_metadata TEXT,
+            gallery_data TEXT,
+            edited REAL,
+            subreddit_subscribers INTEGER
+        )
+        """
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def get_subreddit_urls():
+    """
+    Retrieve subreddit URLs from the database.
+
+    Returns:
+        list: A list of subreddit URLs.
+    """
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(f"SELECT url FROM {SUBREDDIT_TABLE}")
+        urls = [row[0] for row in cursor.fetchall()]
+        return urls
+    except sqlite3.Error as e:
+        logging.error(f"Error fetching subreddit URLs: {e}")
+        return []
+    finally:
+        connection.close()
+
+
+def fetch_posts(subreddit_url):
+    """
+    Fetch posts from a subreddit using Reddit's JSON API.
+
+    Args:
+        subreddit_url (str): The base URL of the subreddit.
+        max_pages (int): Maximum number of pages to fetch.
+
+    Returns:
+        list: A list of post metadata dictionaries.
+    """
+    posts = []
+    after = None
+
+    for page in range(10):
+        url = f"{subreddit_url}.json?limit={POSTS_PER_PAGE}"
+        if after:
+            url += f"&after={after}"
+
+        logging.info(f"Fetching page {page + 1} from {url}")
+        try:
+            response = requests.get(url, headers={"User-Agent": "PythonScript"})
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract posts
+            children = data.get("data", {}).get("children", [])
+            for child in children:
+                post = child["data"]
+                posts.append(
+                    {
+                        "post_id": post.get("id"),
+                        "subreddit": post.get("subreddit"),
+                        "author": post.get("author"),
+                        "created_timestamp": post.get("created_utc"),
+                        "post_title": post.get("title"),
+                        "post_body": post.get("selftext"),
+                        "url": post.get("url"),
+                        "permalink": urljoin("https://www.reddit.com", post.get("permalink")),
+                        "upvotes": post.get("ups"),
+                        "score": post.get("score"),
+                        "upvote_ratio": post.get("upvote_ratio"),
+                        "ups": post.get("ups"),
+                        "comments": post.get("num_comments"),
+                        "link_flair_text": post.get("link_flair_text"),
+                        "thumbnail": post.get("thumbnail"),
+                        "thumbnail_width": post.get("thumbnail_width"),
+                        "thumbnail_height": post.get("thumbnail_height"),
+                        "preview": post.get("preview"),
+                        "media_metadata": post.get("media_metadata"),
+                        "gallery_data": post.get("gallery_data"),
+                        "edited": post.get("edited"),
+                        "subreddit_subscribers": post.get("subreddit_subscribers"),
+                    }
+                )
+
+            # Update 'after' for pagination
+            after = data.get("data", {}).get("after")
+            if not after:
+                logging.info(f"No more pages to fetch for {subreddit_url}")
+                break
+
+        except requests.RequestException as e:
+            logging.error(f"Error fetching data from {url}: {e}")
+            break
+
+    return posts
+
+
+import json
+
+
+def save_posts_to_database(posts):
+    """
+    Save scraped posts to the SQLite database.
+
+    Args:
+        posts (list): A list of post metadata dictionaries.
+    """
+    if not posts:
+        logging.warning("No posts to save to the database.")
+        return
+
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
+
+    try:
+        for post in posts:
+            try:
+                # Serialize dict fields to JSON strings
+                media_metadata = (
+                    json.dumps(post.get("media_metadata"))
+                    if post.get("media_metadata")
+                    else None
+                )
+                preview = (
+                    json.dumps(post.get("preview")) if post.get("preview") else None
+                )
+                gallery_data = (
+                    json.dumps(post.get("gallery_data"))
+                    if post.get("gallery_data")
+                    else None
+                )
+                # Convert boolean to integer
+                edited = (
+                    int(post.get("edited"))
+                    if isinstance(post.get("edited"), bool)
+                    else post.get("edited")
+                )
+
+                cursor.execute(
+                    f"""
+                    INSERT OR IGNORE INTO {POSTS_TABLE} (
+                        post_id,
+                        subreddit,
+                        author,
+                        created_timestamp,
+                        post_title,
+                        post_body,
+                        url,
+                        permalink,
+                        upvotes,
+                        score,
+                        upvote_ratio,
+                        ups,
+                        comments,
+                        link_flair_text,
+                        thumbnail,
+                        thumbnail_width,
+                        thumbnail_height,
+                        preview,
+                        media_metadata,
+                        gallery_data,
+                        edited,
+                        subreddit_subscribers
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        post.get("post_id"),
+                        post.get("subreddit"),
+                        post.get("author"),
+                        post.get("created_timestamp"),
+                        post.get("post_title"),
+                        post.get("post_body"),
+                        post.get("url"),
+                        post.get("permalink"),
+                        post.get("upvotes"),
+                        post.get("score"),
+                        post.get("upvote_ratio"),
+                        post.get("ups"),
+                        post.get("comments"),
+                        post.get("link_flair_text"),
+                        post.get("thumbnail"),
+                        post.get("thumbnail_width"),
+                        post.get("thumbnail_height"),
+                        preview,  # Serialized JSON string
+                        media_metadata,  # Serialized JSON string
+                        gallery_data,  # Serialized JSON string
+                        edited,  # Convert bool to int
+                        post.get("subreddit_subscribers")
+                    ),
+                )
+            except sqlite3.Error as e:
+                logging.error(f"SQLite error while inserting post: {e}")
+        connection.commit()
+        logging.info(f"Successfully saved {len(posts)} posts to the database.")
+    finally:
+        connection.close()
+    """
+    Save scraped posts to the SQLite database.
+
+    Args:
+        posts (list): A list of post metadata dictionaries.
+    """
+    if not posts:
+        logging.warning("No posts to save to the database.")
+        return
+
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
+
+    try:
+        for post in posts:
+            try:
+                # Serialize dict fields to JSON strings
+                media_metadata = (
+                    json.dumps(post.get("media_metadata"))
+                    if post.get("media_metadata")
+                    else None
+                )
+                preview = (
+                    json.dumps(post.get("preview")) if post.get("preview") else None
+                )
+                gallery_data = (
+                    json.dumps(post.get("gallery_data"))
+                    if post.get("gallery_data")
+                    else None
+                )
+
+                cursor.execute(
+                    f"""
+                    INSERT OR IGNORE INTO {POSTS_TABLE} (
+                        post_id,
+                        subreddit,
+                        author,
+                        created_timestamp,
+                        post_title,
+                        post_body,
+                        url,
+                        permalink,
+                        upvotes,
+                        score,
+                        upvote_ratio,
+                        ups,
+                        comments,
+                        link_flair_text,
+                        thumbnail,
+                        thumbnail_width,
+                        thumbnail_height,
+                        preview,
+                        media_metadata,
+                        gallery_data,
+                        edited,
+                        subreddit_subscribers
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        post.get("post_id"),
+                        post.get("subreddit"),
+                        post.get("author"),
+                        post.get("created_timestamp"),
+                        post.get("post_title"),
+                        post.get("post_body"),
+                        post.get("url"),
+                        post.get("permalink"),
+                        post.get("upvotes"),
+                        post.get("score"),
+                        post.get("upvote_ratio"),
+                        post.get("ups"),
+                        post.get("comments"),
+                        post.get("link_flair_text"),
+                        post.get("thumbnail"),
+                        post.get("thumbnail_width"),
+                        post.get("thumbnail_height"),
+                        preview,  # Serialized JSON string
+                        media_metadata,  # Serialized JSON string
+                        gallery_data,  # Serialized JSON string
+                        post.get("edited"),
+                        post.get("subreddit_subscribers"),
+                    ),
+                )
+            except sqlite3.Error as e:
+                logging.error(f"SQLite error while inserting post: {e}")
+        connection.commit()
+        logging.info(f"Successfully saved {len(posts)} posts to the database.")
+    finally:
+        connection.close()
+
+    """
+    Save scraped posts to the SQLite database.
+
+    Args:
+        posts (list): A list of post metadata dictionaries.
+    """
+    if not posts:
+        logging.warning("No posts to save to the database.")
+        return
+
+    connection = sqlite3.connect(DATABASE_PATH)
+    cursor = connection.cursor()
+
+    try:
+        for post in posts:
+            try:
+                # Serialize dict fields to JSON strings
+                media_metadata = (
+                    json.dumps(post.get("media_metadata"))
+                    if post.get("media_metadata")
+                    else None
+                )
+                preview = (
+                    json.dumps(post.get("preview")) if post.get("preview") else None
+                )
+                gallery_data = (
+                    json.dumps(post.get("gallery_data"))
+                    if post.get("gallery_data")
+                    else None
+                )
+
+                cursor.execute(
+                    f"""
+                    INSERT OR IGNORE INTO {POSTS_TABLE} (
+                        post_id,
+                        subreddit,
+                        author,
+                        created_timestamp,
+                        post_title,
+                        post_body,
+                        url,
+                        permalink,
+                        upvotes,
+                        score,
+                        upvote_ratio,
+                        ups,
+                        comments,
+                        link_flair_text,
+                        thumbnail,
+                        thumbnail_width,
+                        thumbnail_height,
+                        preview,
+                        media_metadata,
+                        gallery_data,
+                        edited,
+                        subreddit_subscribers
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        post.get("post_id"),
+                        post.get("subreddit"),
+                        post.get("author"),
+                        post.get("created_timestamp"),
+                        post.get("post_title"),
+                        post.get("post_body"),
+                        post.get("url"),
+                        post.get("permalink"),
+                        post.get("upvotes"),
+                        post.get("score"),
+                        post.get("upvote_ratio"),
+                        post.get("ups"),
+                        post.get("comments"),
+                        post.get("link_flair_text"),
+                        post.get("thumbnail"),
+                        post.get("thumbnail_width"),
+                        post.get("thumbnail_height"),
+                        preview,  # Serialized JSON string
+                        media_metadata,  # Serialized JSON string
+                        gallery_data,  # Serialized JSON string
+                        post.get("edited"),
+                        post.get("subreddit_subscribers"),
+                    ),
+                )
+            except sqlite3.Error as e:
+                logging.error(f"SQLite error while inserting post: {e}")
+        connection.commit()
+        logging.info(f"Successfully saved {len(posts)} posts to the database.")
+    finally:
+        connection.close()
+
+
+def main():
+    """
+    Main function to scrape Reddit posts and save them to the database.
+    """
+    logging.info("Starting the Reddit scraper.")
+
+    # Set up the database
+    setup_database()
+
+    # Get subreddit URLs
+    subreddit_urls = get_subreddit_urls()
+    if not subreddit_urls:
+        logging.error("No subreddit URLs found in the database.")
+        return
+
+    # Scrape posts and save them to the database
+    for subreddit_url in subreddit_urls:
+        posts = fetch_posts(subreddit_url)
+        save_posts_to_database(posts)
+
+    logging.info("Finished scraping Reddit posts.")
+
+
+if __name__ == "__main__":
+    main()

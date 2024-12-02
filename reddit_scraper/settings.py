@@ -17,7 +17,7 @@ SPIDER_MODULES = ["reddit_scraper.spiders"]
 NEWSPIDER_MODULE = "reddit_scraper.spiders"
 
 # Database settings
-DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'database')
+DB_DIR = os.path.join(os.path.dirname(__file__), "..", "database")
 DB_PATH = os.path.join(DB_DIR, "data.db")
 
 
@@ -25,7 +25,7 @@ DB_PATH = os.path.join(DB_DIR, "data.db")
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 8
+CONCURRENT_REQUESTS = 32
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
@@ -33,13 +33,8 @@ TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
 DOWNLOADER_MIDDLEWARES = {
-    "scrapy_user_agents.middlewares.RandomUserAgentMiddleware": 400,
-    "rotating_proxies.middlewares.RotatingProxyMiddleware": 610,
-    "rotating_proxies.middlewares.BanDetectionMiddleware": 620,
+    "scrapy_user_agents.middlewares.RandomUserAgentMiddleware": 400
 }
-
-ROTATING_PROXY_LIST_PATH = "tor_proxy/proxy_list.txt"
-ROTATING_PROXY_PAGE_RETRY_TIMES = 5
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

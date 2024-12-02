@@ -80,7 +80,6 @@ class SubredditPostMetaPipeline:
 
         self._insert_item(item_dict)
 
-        # Ensure the `post_id` exists in the `comments` table for future comments syncing
         self._sync_with_comments(item_dict["post_id"])
 
         logging.debug("Inserted item into posts table and synced with comments table")
@@ -126,10 +125,11 @@ class SubredditPostMetaPipeline:
         Creates the `comments` table if it does not exist in the SQLite database.
         """
         create_table_sql = """
-        CREATE TABLE IF NOT EXISTS comments (
-            post_id TEXT PRIMARY KEY,
+        CREATE TABLE comments (
+            post_id TEXT,
             body TEXT,
             author TEXT,
+            PRIMARY KEY (post_id, body),
             FOREIGN KEY (post_id) REFERENCES posts (post_id)
         );
         """
