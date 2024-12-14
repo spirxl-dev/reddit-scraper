@@ -34,13 +34,12 @@ class SubredditPostMetaSpider(Spider):
                              Defaults to 1 page.
         """
         super(SubredditPostMetaSpider, self).__init__(*args, **kwargs)
-        try:
-            self.max_pages = int(max_pages)
-            if self.max_pages < 1:
-                raise ValueError
-        except ValueError:
-            logging.error("Invalid `max_pages` value. Should be a positive integer.")
-            self.max_pages = 1
+
+        self.max_pages = int(max_pages)
+        if not (1 <= self.max_pages <= 10):
+            raise CloseSpider(
+                f"Invalid `max_pages`: {self.max_pages}. Must be between 1 and 10."
+            )
 
     def start_requests(self):
         """
